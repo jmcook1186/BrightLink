@@ -1,4 +1,3 @@
-
 import pytest
 import time
 from brownie import (
@@ -6,7 +5,7 @@ from brownie import (
     interface
 )
 
-def check_initial_balances():
+def check_initial_balances(load_customer):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
@@ -14,27 +13,33 @@ def check_initial_balances():
 
     assert dai.balanceOf(contract) ==0
     assert adai.balanceOf(contract)==0
+    assert dai.balanceOF(load_customer)==0
 
     return
 
-def test_initial_deposit(set_deposit_amount, getDeployedContract, load_account):
+def test_initial_deposit(set_deposit_amount, getDeployedContract, load_donor):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     contract = getDeployedContract
 
-    initialBalance = dai.balanceOf(contract)
-    dai.transfer(contract,set_deposit_amount,{'from':load_account})
+    initialContractBalance = dai.balanceOf(contract)
+    initialDonorBalance = dai.balanceOf(load_donor)
+
+    dai.transfer(contract,set_deposit_amount,{'from':load_donor})
     
-    time.sleep(10)
-    finalBalance = dai.balanceOf(contract)
+    time.sleep(2)
+
+    finalContractBalance = dai.balanceOf(contract)
+    finalDonorBalance = dai.balanceOf(load_donor)
 
     assert set_deposit_amount > 0
-    assert finalBalance == initialBalance + set_deposit_amount
+    assert finalContractBalance == initialContractBalance + set_deposit_amount
+    assert finalDonorBalance == initialDonorBalance - set_deposit_amount
 
     return
 
 
-def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_account):
+def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_owner):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
@@ -46,7 +51,7 @@ def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_accoun
     assert initialDaiBalance == set_deposit_amount
     assert initialAdaiBalance == 0
     
-    contract.depositFundsToAave({'from':load_account})
+    contract.depositFundsToAave({'from':load_owner})
 
     time.sleep(10)
 
@@ -58,43 +63,66 @@ def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_accoun
     
     return
 
-def test_profit(set_deposit_amount, getDeployedContract):
-
-    adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
+def test_aave_interest(getDeployedContract):
+    
     contract = getDeployedContract
+    adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
+    t1 = adai.balanceOf(contract)
+    time.sleep(20)
+    t2 = adai.balanceOf(contract)
+    time.sleep(20)
+    t3 = adai.balanceOf(contract)
 
-    assert adai.balanceOf(contract) > set_deposit_amount
+    assert t3 > t2
+    assert t2 > t1
 
     return
 
-def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, load_account):
+
+
+def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, load_owner):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
 
-    contract.WithdrawFundsFromAave({'from': load_account})
+    contract.WithdrawFundsFromAave({'from': load_owner})
 
     assert dai.balanceOf(contract) >= set_deposit_amount
     assert adai.balanceOf(contract) == 0
 
     return
 
-def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_account):
+
+def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold, set_trigger_value):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
+    contract.setDummyTrigger(set_trigger_value,{'from':load_owner})
+    
+    initialOwnerBalance = dai.balanceOf(load_owner)
+    initialCustomerBalance = dai.balanceOf(load_customer)
+    initialDonorBalance = dai.balanceOf(load_donor)
 
-    initialBalance = dai.balanceOf(load_account)
-    initialContractBalance = dai.balanceOf(contract)
+    contract.retrieveDAI({'from':load_owner})
+    time.sleep(5)
 
-    contract.retrieveDAI({'from':load_account})
-    time.sleep(10)
-
-    assert dai.balanceOf(contract) == 0
     assert adai.balanceOf(contract) == 0
-    assert adai.balanceOf(load_account) == 0
-    assert dai.balanceOf(load_account) == (initialBalance + initialContractBalance)
+    
+    if set_trigger_value > set_threshold:
+
+        assert adai.balanceOf(contract) == 0
+        assert dai.balanceOf(contract) == 0
+        assert dai.balanceOf(load_owner) > initialOwnerBalance
+        assert dai.balanceOf(load_customer) == initialCustomerBalance+set_deposit_amount
+        assert dai.balanceOf(load_donor) == initialDonorBalance
+    
+    else:
+        assert adai.balanceOf(contract) == 0
+        assert dai.balanceOf(contract) == 0
+        assert dai.balanceOf(load_owner) > initialOwnerBalance
+        assert dai.balanceOf(load_customer) == initialCustomerBalance
+        assert dai.balanceOf(load_donor) == initialDonorBalance+set_deposit_amount
 
     return
