@@ -1,0 +1,47 @@
+# exclude SafeMath when calculating test coverage
+# https://eth-brownie.readthedocs.io/en/v1.10.3/config.html#exclude_paths
+reports:
+  exclude_contracts:
+    - SafeMath
+dependencies:
+  - smartcontractkit/chainlink-brownie-contracts@1.0.2
+  - OpenZeppelin/openzeppelin-contracts@3.4.0
+compiler:
+  solc:
+    remappings:
+      - '@chainlink=smartcontractkit/chainlink-brownie-contracts@1.0.2'
+      - '@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0'
+      
+# automatically fetch contract sources from Etherscan
+autofetch_sources: True
+dotenv: .env
+
+
+networks:
+  default: development
+  development:
+    keyhash: '0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4'
+    fee: 100000000000000000
+    jobId: '29fa9aa13bf1468788b7cc4a500a45b8'
+    update_interval: 60
+    verify: False
+  kovan:
+    link_token: '0xa36085F69e2889c224210F603D836748e7dC0088'
+    keyhash: '0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4'
+    fee: 100000000000000000
+    oracle: '0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e'
+    jobId: '29fa9aa13bf1468788b7cc4a500a45b8'
+    DAI_token: '0xff795577d9ac8bd7d90ee22b6c1703490b6512fd'
+    aavePools: '0x88757f2f99175387aB4C6a4b3067c77A695b0349'
+    
+    # Kovan aave token contract addresses: https://aave.github.io/aave-addresses/kovan.json
+    # Kovan aave contract addresses: https://docs.aave.com/developers/v/2.0/deployed-contracts/amm-market
+    
+    # Change to True if you have an Etherscan API key and want to verify
+    verify: False
+    update_interval: 60
+
+
+wallets:
+  from_key: ${PRIVATE_KEY}
+
