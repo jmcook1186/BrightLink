@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+// this contract is deployed on Kovan at 0xb7A997C957bF86E82ea5804c301142eF07c36829
+
 pragma solidity ^0.6.6;
 
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
@@ -6,9 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolAddressesProviderV2.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
-// https://docs.aave.com/developers/the-core-protocol/lendingpool //
-
-contract BrightLink is ChainlinkClient {
+contract BrightLink_Aave_v1 {
 
     uint256 depositedFunds;
     address private owner;
