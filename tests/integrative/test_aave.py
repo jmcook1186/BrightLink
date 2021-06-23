@@ -29,12 +29,10 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
 
     contract.depositFundsToAave({'from':load_owner})
     
+    time.sleep(30)
+
     contract.WithdrawFundsFromAave({'from': load_owner})
 
-
-    dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
-    adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
-    contract = getDeployedContract
     contract.setDummyTrigger(trigger,{'from':load_owner})
 
     assert adai.balanceOf(contract) == 0
@@ -45,8 +43,7 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     initialDonorBalance = dai.balanceOf(load_donor)
 
     contract.retrieveDAI({'from':load_owner})
-    
-    time.sleep(20)
+
 
     if trigger > set_threshold:
 

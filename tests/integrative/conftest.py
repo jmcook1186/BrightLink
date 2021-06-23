@@ -15,10 +15,6 @@ def checkNetwork():
 def set_threshold():
     return 5
 
-@pytest.fixture
-def set_trigger_value():
-    return 7
-
 @pytest.fixture(scope="module")
 def getDeployedContract():
     return Contract('0x15416033dBe9478e436d9DFfb625A5ab7758146D')
