@@ -21,7 +21,7 @@ def set_trigger_value():
 
 @pytest.fixture(scope="module")
 def getDeployedContract():
-    return Contract('0x450Aab7b234314E07B0c304Cb26cCAC231B0ceF2')
+    return Contract('0x15416033dBe9478e436d9DFfb625A5ab7758146D')
 
 @pytest.fixture(scope='module')
 def set_deposit_amount():

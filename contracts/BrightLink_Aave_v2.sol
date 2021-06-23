@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at 0xb7A997C957bF86E82ea5804c301142eF07c36829
+// this contract is deployed on Kovan at '0x15416033dBe9478e436d9DFfb625A5ab7758146D'
 
 pragma solidity ^0.6.6;
 
@@ -45,6 +45,15 @@ contract BrightLink_Aave_v2 {
 
     }
 
+    function lockDepositBalance() public onlyOwner{
+
+        depositedFunds = dai.balanceOf(address(this));
+    }
+
+    function checkDepositAmount() public view returns(uint256 deposit){
+        deposit = depositedFunds;
+    }
+
     function checkBalance() public view returns (uint256 dai_balance, uint256 adai_balance) {
         // dai is held here, but aDai is sent to the owner's wallet so it can be used to yield farm
         dai_balance = dai.balanceOf(address(this));
@@ -54,8 +63,6 @@ contract BrightLink_Aave_v2 {
 
     function depositFundsToAave() public onlyOwner{
 	
-        depositedFunds += dai.balanceOf(address(this));
-
         // Deposit dai and hold aDAI in contract.
         // pool requires approval to move DAI
         dai.approve(poolAddress,100000e18);
@@ -65,18 +72,6 @@ contract BrightLink_Aave_v2 {
     }
 
 
-    function viewDeposits() public view returns (uint256 deposits){
-        
-        deposits = depositedFunds;
-    
-    }
-
-    function viewProfit() public view returns(uint256 profit){
-
-        profit = adai.balanceOf(address(this)) - depositedFunds;
-
-    }
-
     function WithdrawFundsFromAave() public onlyOwner {
     	
     	// swap aDAI in contract for DAI
@@ -84,7 +79,7 @@ contract BrightLink_Aave_v2 {
         adai.approve(poolAddress,100000e18);
         adai.approve(address(this), 100000e18);
         lendingPool.withdraw(dai_address, adai.balanceOf(address(this)), address(this));
-    
+
     }
 
     function setDummyTrigger(uint16 _value) public {
@@ -92,12 +87,16 @@ contract BrightLink_Aave_v2 {
         value = _value;
     }
 
+
     function retrieveDAI() public onlyOwner{
         
         // send DAI from contract back to owner
-        dai.approve(address(this), 100000e18);
+        dai.approve(address(this), depositedFunds);
+        dai.approve(customer, depositedFunds);
+        dai.approve(donor, depositedFunds);
 
         if (value > threshold){
+            
             require(dai.transfer(customer, depositedFunds));
             
             if (dai.balanceOf(address(this))>0){
@@ -106,9 +105,11 @@ contract BrightLink_Aave_v2 {
         }
 
         else{
+
             require(dai.transfer(donor, depositedFunds));
             
             if (dai.balanceOf(address(this))>0){
+
                 require(dai.transfer(owner, dai.balanceOf(address(this))));
             }
         }
