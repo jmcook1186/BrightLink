@@ -27,11 +27,11 @@ networks:
     verify: False
   
   kovan:
-    link_token: '0xa36085F69e2889c224210F603D836748e7dC0088'
+    link_address: '0xa36085F69e2889c224210F603D836748e7dC0088'
     keyhash: '0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4'
     fee: 100000000000000000
     oracle: '0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e'
-    jobId: '29fa9aa13bf1468788b7cc4a500a45b8'
+    jobID: '29fa9aa13bf1468788b7cc4a500a45b8'
     dai_address: '0xff795577d9ac8bd7d90ee22b6c1703490b6512fd'
     adai_address: '0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8'
     poolAddressProvider: '0x88757f2f99175387aB4C6a4b3067c77A695b0349'
