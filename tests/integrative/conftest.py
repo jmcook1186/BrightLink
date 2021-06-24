@@ -13,11 +13,11 @@ def checkNetwork():
 
 @pytest.fixture
 def set_threshold():
-    return 5
+    return 1000
 
 @pytest.fixture(scope="module")
 def getDeployedContract():
-    return Contract('0x15416033dBe9478e436d9DFfb625A5ab7758146D')
+    return Contract('0x977B818C4df8559f76241Ce45ad856520d3B363c')
 
 @pytest.fixture(scope='module')
 def set_deposit_amount():

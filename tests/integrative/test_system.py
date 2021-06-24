@@ -5,45 +5,55 @@ from brownie import (
     interface
 )
 
-def check_initial_balances(load_customer):
-
-
-
-    assert dai.balanceOf(contract) ==0
-    assert adai.balanceOf(contract)==0
-    assert dai.balanceOF(load_customer)==0
-
-    return
-
-
-@pytest.mark.parametrize('trigger',[0,3,5,7])
-def test_system(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold, trigger):
+def test_initial_balances(load_customer, getDeployedContract):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
 
+    assert dai.balanceOf(contract) ==0
+    assert adai.balanceOf(contract)==0
+    assert dai.balanceOf(load_customer)==0
+
+    return
+
+
+def test_system(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold):
+
+    dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
+    adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
+    link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
+
+    contract = getDeployedContract
+
+    link.transfer(contract,0.2e18,{'from':load_owner})
+    assert link.balanceOf(contract)!=0
+
     dai.transfer(contract,set_deposit_amount,{'from':load_donor})
+    assert dai.balanceOf(contract) == set_deposit_amount
 
     contract.lockDepositBalance({'from':load_owner})
+    assert contract.checkBalance()[0] == set_deposit_amount
 
     contract.depositFundsToAave({'from':load_owner})
+    assert dai.balanceOf(contract)==0
+    assert adai.balanceOf(contract)!=0
     
     time.sleep(30)
 
+    contract.requestDataFromAPI({'from':load_owner})
+    trigger = contract.viewValueFromOracle()
+    assert trigger != 0
+
     contract.WithdrawFundsFromAave({'from': load_owner})
-
-    contract.setDummyTrigger(trigger,{'from':load_owner})
-
-    assert adai.balanceOf(contract) == 0
-    assert dai.balanceOf(contract) > set_deposit_amount
+    assert dai.balanceOf(contract)>set_deposit_amount
+    assert adai.balanceOf(contract)==0
 
     initialOwnerBalance = dai.balanceOf(load_owner)
     initialCustomerBalance = dai.balanceOf(load_customer)
     initialDonorBalance = dai.balanceOf(load_donor)
 
     contract.retrieveDAI({'from':load_owner})
-
 
     if trigger > set_threshold:
 

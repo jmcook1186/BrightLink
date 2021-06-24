@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at '0xB9e42FBD170d23eB6C781b286851Aae495d676d9'
+// this contract is deployed on Kovan at '0x977B818C4df8559f76241Ce45ad856520d3B363c'
 
 pragma solidity ^0.6.6;
 
@@ -102,7 +102,7 @@ contract BrightLink_v01 is ChainlinkClient {
         
         // Set the URL to perform the GET request on
         request.add("get", "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example.json");
-        request.add("path", "number");
+        request.add("path", "data.0.number");
         
         // Sends the request
         return sendChainlinkRequestTo(oracle, request, fee);

@@ -96,12 +96,34 @@ def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, load_owne
     return
 
 
-def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold, set_trigger_value):
+def test_send_link(getDeployedContract, load_owner):
+    
+    nLINK = 0.3e18
+    link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
+    initial_LINK_balance = link.balanceOf(getDeployedContract)
+    link.transfer(getDeployedContract,nLINK,{'from':load_owner})
+    assert link.balanceOf(getDeployedContract) == initial_LINK_balance + nLINK
+
+    return
+
+
+def test_oracle_request(getDeployedContract, load_owner):
+    
+    contract = getDeployedContract
+
+    contract.requestDataFromAPI({'from':load_owner})
+    trigger = contract.viewValueFromOracle()
+    assert trigger != 0
+
+    return
+
+
+def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
-    contract.setDummyTrigger(set_trigger_value,{'from':load_owner})
+    trigger = contract.viewValueFromOracle()
 
     assert adai.balanceOf(contract) == 0
     assert dai.balanceOf(contract) > set_deposit_amount
@@ -114,7 +136,7 @@ def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_
     
     time.sleep(20)
 
-    if set_trigger_value > set_threshold:
+    if trigger > set_threshold:
 
         assert adai.balanceOf(contract) == 0
         assert dai.balanceOf(contract) == 0
@@ -128,5 +150,23 @@ def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_
         assert dai.balanceOf(load_owner) > initialOwnerBalance
         assert dai.balanceOf(load_customer) == initialCustomerBalance
         assert dai.balanceOf(load_donor) == initialDonorBalance+set_deposit_amount
+
+    return
+
+def test_reset_fund_allocation(getDeployedContract, load_owner,load_customer,load_donor):
+
+    contract = getDeployedContract
+    dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
+    adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
+    link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
+
+    if link.balanceOf(contract) > 0:
+        contract.retrieveLINK({'from':load_owner})
+    
+    if dai.balanceOf(contract) > 0:
+        contract.escapeHatch({'from':load_owner})
+    
+    if dai.balanceOf(load_customer) >0:
+        dai.transfer(load_donor,dai.balanceOf(load_customer),{'from':load_customer})
 
     return
