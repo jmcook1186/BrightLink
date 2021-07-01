@@ -5,19 +5,31 @@ from brownie import (
     interface
 )
 
-def check_initial_balances(load_customer):
 
+
+def test_initial_balances(load_customer, getDeployedContract):
+    """
+    
+    ensure contract and customer wallets are empty of DAI at start of testing
+
+    """
+    
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
 
     assert dai.balanceOf(contract) ==0
     assert adai.balanceOf(contract)==0
-    assert dai.balanceOF(load_customer)==0
+    assert dai.balanceOf(load_customer)==0
 
     return
 
+
 def test_initial_deposit(set_deposit_amount, getDeployedContract, load_donor, load_owner):
+
+    """
+    ensure initial transfer of DAI from donor to contract executes correctly
+    """
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     contract = getDeployedContract
@@ -41,7 +53,27 @@ def test_initial_deposit(set_deposit_amount, getDeployedContract, load_donor, lo
     return
 
 
-def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_owner):
+@pytest.mark.parametrize("wallet",
+    [
+     pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
+     pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
+     'owner'])
+
+def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, wallet, load_donor, load_customer, load_owner):
+    
+    """
+    test transfer of funds from contract to aave lending pool
+    parametrized test: iterates through 3 wallets. Only "owner" should have permisson, so 2/3 expected to fail.
+    
+    """
+    if wallet == 'donor':
+        wallet = load_donor
+    elif wallet == 'customer':
+        wallet = load_customer
+    elif wallet == 'owner':
+        wallet = load_owner
+    else:
+        raise("INVALID WALLET")
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
@@ -53,7 +85,7 @@ def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_owner)
     assert initialDaiBalance == set_deposit_amount
     assert initialAdaiBalance == 0
     
-    contract.depositFundsToAave({'from':load_owner})
+    contract.depositFundsToAave({'from':wallet})
 
     time.sleep(10)
 
@@ -65,8 +97,14 @@ def test_move_funds_to_aave(set_deposit_amount, getDeployedContract, load_owner)
     
     return
 
+
 def test_aave_interest(getDeployedContract):
     
+    """
+    ensure funds in aave pool are accruing interest in
+    the form of aDAI tokens in the contract
+    """
+
     contract = getDeployedContract
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     t1 = adai.balanceOf(contract)
@@ -81,14 +119,33 @@ def test_aave_interest(getDeployedContract):
     return
 
 
+@pytest.mark.parametrize("wallet",
+    [
+     pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
+     pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
+     'owner'
+    ])
+def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, wallet, load_donor, load_customer, load_owner):
+    
+    """
+    test that funds can be withdrawn from aave lending pool back into contract
+    parametrized test: iterates through 3 wallets. Only "owner" should have permisson, so 2/3 expected to fail.
+    """
 
-def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, load_owner):
+    if wallet == 'donor':
+        wallet = load_donor
+    elif wallet == 'customer':
+        wallet = load_customer
+    elif wallet == 'owner':
+        wallet = load_owner
+    else:
+        raise("INVALID WALLET")
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     contract = getDeployedContract
 
-    contract.WithdrawFundsFromAave({'from': load_owner})
+    contract.WithdrawFundsFromAave({'from': wallet})
 
     assert dai.balanceOf(contract) >= set_deposit_amount
     assert adai.balanceOf(contract) == 0
@@ -98,6 +155,10 @@ def test_withdrawal_from_aave(set_deposit_amount, getDeployedContract, load_owne
 
 def test_send_link(getDeployedContract, load_owner):
     
+    """
+    ensure contract receives LINK token to use as oracle gas
+    """
+
     nLINK = 0.3e18
     link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
     initial_LINK_balance = link.balanceOf(getDeployedContract)
@@ -106,19 +167,57 @@ def test_send_link(getDeployedContract, load_owner):
 
     return
 
-
-def test_oracle_request(getDeployedContract, load_owner):
+# don't mark the following as expected fails as the function is public - should work for all 3 wallets
+@pytest.mark.parametrize("wallet", ['donor','customer','owner'])
+def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, load_owner):
     
+    """
+    ensure that data can be requested from oracle
+    test parametrized but all three wallets have permission - expect 3/3 pass
+    """
+
+    if wallet == 'donor':
+            wallet = load_donor
+    elif wallet == 'customer':
+        wallet = load_customer
+    elif wallet == 'owner':
+        wallet = load_owner
+    else:
+        raise("INVALID WALLET")
+
     contract = getDeployedContract
 
-    contract.requestDataFromAPI({'from':load_owner})
+    contract.requestDataFromAPI({'from':wallet})
     trigger = contract.viewValueFromOracle()
     assert trigger != 0
 
     return
 
 
-def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold):
+@pytest.mark.parametrize("wallet",
+    [
+     pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
+     pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
+     'owner'
+    ])
+def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, wallet, load_owner, load_customer, load_donor, set_threshold):
+    
+    """
+    ensure withdrawal of DAI from contract to recipient executs correctly.
+    If oracle data > threshold, send to customer
+    if oracle data < threshold, send to donor
+    parametrized test: only "owner" has permission, so 2/3 expected to fail
+    """    
+    
+    if wallet == 'donor':
+        wallet = load_donor
+    elif wallet == 'customer':
+        wallet = load_customer
+    elif wallet == 'owner':
+        wallet = load_owner
+    else:
+        raise("INVALID WALLET")
+
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
@@ -132,7 +231,7 @@ def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_
     initialCustomerBalance = dai.balanceOf(load_customer)
     initialDonorBalance = dai.balanceOf(load_donor)
 
-    contract.retrieveDAI({'from':load_owner})
+    contract.retrieveDAI({'from':wallet})
     
     time.sleep(20)
 
@@ -154,6 +253,12 @@ def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, load_
     return
 
 def test_reset_fund_allocation(getDeployedContract, load_owner,load_customer,load_donor):
+
+    """
+    
+    this function transfers DAI between wallets to reset to the initial balances
+    
+    """
 
     contract = getDeployedContract
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
