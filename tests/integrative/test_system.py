@@ -47,6 +47,8 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     trigger = contract.viewValueFromOracle()
     assert trigger != 0
 
+    contract.validateOracleData({'from':load_owner})
+
     contract.WithdrawFundsFromAave({'from': load_owner})
     assert dai.balanceOf(contract)>set_deposit_amount
     assert adai.balanceOf(contract)==0

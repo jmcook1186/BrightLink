@@ -36,6 +36,8 @@ contract BrightLink_v01 is ChainlinkClient {
     uint16 w1;
     uint16 w2;
     uint16 w3;
+    uint16 minResponses = 2;
+    uint16 badOracles = 0;
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, address _customer, address _donor, string memory _jobID, uint256 _fee, uint16 _threshold) public{
@@ -157,6 +159,18 @@ contract BrightLink_v01 is ChainlinkClient {
         index++;
         // calculate weighted mean of data in oracleData array
         aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
+    }
+
+    function validateOracleData() public {    
+        // ensures a sufficient number of oracles return valid data
+        // avoids accidentally centralizing workflow by relying on 1 oracle
+
+        for (uint16 i = 0; i<oracleData.length; i++) {  //for loop example
+            if (oracleData[i] ==0){
+
+                badOracles++;
+            } 
+        }
 
     }
 
@@ -166,7 +180,7 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
 
-    function retrieveDAI() public onlyOwner{
+    function retrieveDAI() public onlyOwner onlyForValidOracles{
         
         // send DAI from contract back to owner
         dai.approve(address(this), depositedFunds);
@@ -207,7 +221,7 @@ contract BrightLink_v01 is ChainlinkClient {
     function escapeHatch() public onlyOwner{
         // for testing purposes, if all gone wrong, retrieve funds
         // to save having to get more from faucets
-        
+
         if (dai.balanceOf(address(this))>0){
             require(dai.transfer(owner,dai.balanceOf(address(this))));
         }
@@ -226,11 +240,16 @@ contract BrightLink_v01 is ChainlinkClient {
 
     // ACCESSORY FUNCTIONS
     
-        modifier onlyOwner(){
+    modifier onlyOwner(){
         require(owner==msg.sender);
         _;
     }
     
+    modifier onlyForValidOracles(){
+        require(badOracles<minResponses,"INSUFFICIENT VALID ORACLE RESPONSES: WITHDRAWAL PROHIBITED");
+       _;
+    }
+
     function stringToBytes32(string memory source) public pure returns (bytes32 result) {
         bytes memory tempEmptyStringTest = bytes(source);
         if (tempEmptyStringTest.length == 0) {

@@ -243,17 +243,26 @@ def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, 
     contract = getDeployedContract
 
     contract.requestDataFromAPI({'from':wallet})
+
     time.sleep(2)
     
-    trigger = contract.viewValueFromOracle()
+    value = contract.viewValueFromOracle()
     
     # value from oracle should not be zero
     # it should be weighted mean of values
     # at each API endpoint
-    assert trigger != 0
+    assert value != 0
 
     return
 
+
+def test_oracle_validation(getDeployedContract,load_owner):
+    # no assert function required as the validation will simply
+    # fail if there are less than 2 oracles returning good data
+    contract = getDeployedContract
+    contract.validateOracleData({'from':load_owner})
+
+    return
 
 @pytest.mark.parametrize("wallet",
     [
