@@ -32,6 +32,9 @@ contract BrightLink_v01 is ChainlinkClient {
     ILendingPoolAddressesProviderV2 public provider;
     uint16 index = 0;
     uint256 aggregateData;
+    uint16 w1;
+    uint16 w2;
+    uint16 w3;
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, address _customer, address _donor, string memory _jobID, uint256 _fee, uint16 _threshold) public{
@@ -107,6 +110,14 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
 
+    function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner{
+
+        w1 = _w1;
+        w2 = _w2;
+        w3 = _w3;
+
+    }
+
     function requestDataFromAPI() public onlyOwner{
 
         oracleRequest(APIaddresses[0]);
@@ -134,8 +145,9 @@ contract BrightLink_v01 is ChainlinkClient {
 
         oracleData[index] = _value; 
         // This ensures the array never goes past 3, we just keep rotating responses
-        index = (index + 1) % 3;
-        aggregateData = (oracleData[0]+oracleData[1]+oracleData[2])/3;
+        index++;
+        
+        aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
 
     }
 

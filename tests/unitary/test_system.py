@@ -181,17 +181,17 @@ def test_send_link(getDeployedContract, load_owner):
     return
 
 
-@pytest.mark.parametrize("wallet",     [
+@pytest.mark.parametrize("wallet",[
      pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
      pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
      'owner'
     ])
-def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, load_owner):
+def test_set_weights(getDeployedContract, wallet, load_donor, load_customer, load_owner):
     
     """
     ensure that data can be requested from oracle
     test parametrized: only owner can access, expect 2/3 to fail
-    
+
     """
 
     if wallet == 'donor':
@@ -205,8 +205,51 @@ def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, 
 
     contract = getDeployedContract
 
+    w1 = 100
+    w2 = 100
+    w3 = 100
+
+    for i in [w1, w2, w3]:
+        assert i <= 100
+
+    contract.setWeights(w1, w2, w3,{'from':wallet})
+
+    return
+
+
+
+@pytest.mark.parametrize("wallet",[
+     pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
+     pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
+     'owner'
+    ])
+def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, load_owner):
+    
+    """
+    ensure that data can be requested from oracle
+    test parametrized: only owner can access, expect 2/3 to fail
+
+    """
+
+    if wallet == 'donor':
+        wallet = load_donor
+    elif wallet == 'customer':
+        wallet = load_customer
+    elif wallet == 'owner':
+        wallet = load_owner
+    else:
+        raise("INVALID WALLET")
+
+    contract = getDeployedContract
+
     contract.requestDataFromAPI({'from':wallet})
+    time.sleep(2)
+    
     trigger = contract.viewValueFromOracle()
+    
+    # value from oracle should not be zero
+    # it should be weighted mean of values
+    # at each API endpoint
     assert trigger != 0
 
     return

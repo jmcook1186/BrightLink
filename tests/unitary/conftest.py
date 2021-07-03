@@ -17,11 +17,11 @@ def set_threshold():
 
 @pytest.fixture(scope="module")
 def getDeployedContract():
-    return Contract('0xBAbF7f605cd9e0D377F26f080a69699f7784dFE4')
+    return Contract('0x22dE9B2e483f46FC181d60878d297C3C77A77840')
 
 @pytest.fixture(scope='module')
 def set_deposit_amount():
-    return 5000e18
+    return 2000e18
 
 @pytest.fixture(scope='module')
 def load_owner():
