@@ -1,18 +1,19 @@
 # BRIGHTLINK
 
-*NB: This repository is in active development and currently has very limited functionality. This README details the vision for the project, which will exceed the actual project code for some time!
+*NB: This repository is in active development and does not yet have full functionality.
 
+July 2021: payouts now triggered by aggregate (weighted mean) of 3 chainlink oracle requests
 June 2021: Only v1 of the financial model is actually implemented in the repository.
 
 Ongoing blog posts about this project development can be found at [www.tothepoles.co.uk/](https://tothepoles.co.uk/category/eolink/)*
 
 
 ## Outline
-This project is a dummy system that incentivizes hypothetical communities to "brighten" their local environment. There are two use-cases in this repository:
+This system incentivizes hypothetical communities to "brighten" their local environment. There are two use-cases in this repository:
 
 ### Purpose
 
-1) Environmental organizations are incentivized to "brighten" snow, ice and sea ice surfaces to slow their rate of melting. This is currently achieved occasionally using light-scattering sand or strategically-placed white sheets and has the effect of slowing sea ice retreat and prolonging snowpacks for ski resorts etc. The degree to which brightening occurs will be determined as a function of the deviation in the surface albedo derived from Sentinel-2 imagery relative to a baseline.
+1) Environmental organizations are incentivized to "brighten" snow, ice and sea ice surfaces to slow their rate of melting. This is currently achieved occasionally using light-scattering sand or strategically-placed white sheets and has the effect of slowing sea ice retreat and prolonging the life of snowpacks for ski resorts etc. The degree to which brightening occurs will be determined as a function of the deviation in the surface albedo derived from Sentinel-2 imagery relative to a baseline.
 
 2) A community is incentivized to "green" their local environment by conserving and adding vegetated land (replanting verges, rooftop gardens, etc..). The payout is scaled by the % change in "green" area within the area of interest. The surface greening calculation is achieved using a supervised classification algorithm applied to multispectral Sentinel-2 satellite data.
 
