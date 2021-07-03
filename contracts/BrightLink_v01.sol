@@ -24,15 +24,18 @@ contract BrightLink_v01 is ChainlinkClient {
     address private oracle; // oracle address
     bytes32 private jobID; // oracle jobID
     uint256 private fee; // oracle fee
+    string[3] public APIaddresses; 
+    uint256[3] public oracleData;
     IERC20 public dai;
     IERC20 public adai;
     ILendingPoolV2 public lendingPool;
     ILendingPoolAddressesProviderV2 public provider;
+    uint16 index = 0;
+    uint256 aggregateData;
 
-    constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider, 
+    constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, address _customer, address _donor, string memory _jobID, uint256 _fee, uint16 _threshold) public{
     
-
         owner = msg.sender;
         customer = _customer;
         donor = _donor;
@@ -49,7 +52,14 @@ contract BrightLink_v01 is ChainlinkClient {
         oracle = _oracle;
         jobID = stringToBytes32(_jobID);
         fee = _fee;
+        APIaddresses[0] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example.json";
+        APIaddresses[1] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example2.json";
+        APIaddresses[2] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example3.json";
+        oracleData[0] = 0;
+        oracleData[1] = 0;
+        oracleData[2] = 0;
 
+        
         // set link token address depending on network
         if (_link == address(0)) {
             setPublicChainlinkToken();
@@ -96,12 +106,22 @@ contract BrightLink_v01 is ChainlinkClient {
 
     }
 
-    function requestDataFromAPI() public returns (bytes32 requestId) 
+
+    function requestDataFromAPI() public onlyOwner{
+
+        oracleRequest(APIaddresses[0]);
+        oracleRequest(APIaddresses[1]);
+        oracleRequest(APIaddresses[2]);
+    
+    }
+
+
+    function oracleRequest(string memory url) internal returns (bytes32 requestId) 
     {
         Chainlink.Request memory request = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
         
         // Set the URL to perform the GET request on
-        request.add("get", "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example.json");
+        request.add("get", url);
         request.add("path", "data.0.number");
         
         // Sends the request
@@ -111,14 +131,19 @@ contract BrightLink_v01 is ChainlinkClient {
     function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId)
     
     {
-        // fulfill request and instantiate warningLevel var with retrieved value
-        value = _value;
+
+        oracleData[index] = _value; 
+        // This ensures the array never goes past 3, we just keep rotating responses
+        index = (index + 1) % 3;
+        aggregateData = (oracleData[0]+oracleData[1]+oracleData[2])/3;
+
     }
 
     function viewValueFromOracle() public view returns(uint256 viewValue){
         
-        viewValue = value;
+        viewValue = aggregateData;
     }
+
 
     function retrieveDAI() public onlyOwner{
         
@@ -127,7 +152,7 @@ contract BrightLink_v01 is ChainlinkClient {
         dai.approve(customer, depositedFunds);
         dai.approve(donor, depositedFunds);
 
-        if (value > threshold){
+        if (aggregateData > threshold){
             
             require(dai.transfer(customer, depositedFunds));
             

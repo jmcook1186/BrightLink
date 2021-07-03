@@ -1,3 +1,16 @@
+"""
+Unit tests that cover all functions
+in BrightLink v.01
+
+For most functions, security is tested
+by attempting to call functions from 
+multiple wallets. Expected pass/fail
+depends on function's access modifier.
+
+pytest should pick up 17 items
+
+"""
+
 import pytest
 import time
 from brownie import (
@@ -159,7 +172,7 @@ def test_send_link(getDeployedContract, load_owner):
     ensure contract receives LINK token to use as oracle gas
     """
 
-    nLINK = 0.3e18
+    nLINK = 5e18
     link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
     initial_LINK_balance = link.balanceOf(getDeployedContract)
     link.transfer(getDeployedContract,nLINK,{'from':load_owner})
@@ -167,13 +180,18 @@ def test_send_link(getDeployedContract, load_owner):
 
     return
 
-# don't mark the following as expected fails as the function is public - should work for all 3 wallets
-@pytest.mark.parametrize("wallet", ['donor','customer','owner'])
+
+@pytest.mark.parametrize("wallet",     [
+     pytest.param('donor', marks=pytest.mark.xfail(reason="donor wallet does not have access to this function")),
+     pytest.param('customer', marks=pytest.mark.xfail(reason="customer wallet does not have access to this function")),
+     'owner'
+    ])
 def test_oracle_request(getDeployedContract, wallet, load_donor, load_customer, load_owner):
     
     """
     ensure that data can be requested from oracle
-    test parametrized but all three wallets have permission - expect 3/3 pass
+    test parametrized: only owner can access, expect 2/3 to fail
+    
     """
 
     if wallet == 'donor':
@@ -251,6 +269,8 @@ def test_withdrawal_from_contract(set_deposit_amount, getDeployedContract, walle
         assert dai.balanceOf(load_donor) == initialDonorBalance+set_deposit_amount
 
     return
+
+
 
 def test_reset_fund_allocation(getDeployedContract, load_owner,load_customer,load_donor):
 
