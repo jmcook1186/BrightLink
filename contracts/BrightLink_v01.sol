@@ -10,6 +10,7 @@ import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
 contract BrightLink_v01 is ChainlinkClient {
 
+    // var definitions
     uint256 public depositedFunds;
     address private owner;
     uint16 private referral = 0;
@@ -38,7 +39,8 @@ contract BrightLink_v01 is ChainlinkClient {
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, address _customer, address _donor, string memory _jobID, uint256 _fee, uint16 _threshold) public{
-    
+        
+        // var instantiations
         owner = msg.sender;
         customer = _customer;
         donor = _donor;
@@ -62,7 +64,6 @@ contract BrightLink_v01 is ChainlinkClient {
         oracleData[1] = 0;
         oracleData[2] = 0;
 
-        
         // set link token address depending on network
         if (_link == address(0)) {
             setPublicChainlinkToken();
@@ -73,16 +74,20 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
     function lockDepositBalance() public onlyOwner{
-
+        // set total deposited DAI amount
         depositedFunds = dai.balanceOf(address(this));
     }
 
     function checkDepositAmount() public view returns(uint256 deposit){
+        // view function to show user how much DAI was deposited
         deposit = depositedFunds;
     }
 
     function checkBalance() public view returns (uint256 dai_balance, uint256 adai_balance) {
-        // dai is held here, but aDai is sent to the owner's wallet so it can be used to yield farm
+        
+        // balance of DAI and aDAI in contract
+        // aDAI is the debt token from the Aave pool
+        
         dai_balance = dai.balanceOf(address(this));
         adai_balance = adai.balanceOf(address(this));
 
@@ -90,7 +95,7 @@ contract BrightLink_v01 is ChainlinkClient {
 
     function depositFundsToAave() public onlyOwner{
 	
-        // Deposit dai and hold aDAI in contract.
+        // Deposit dai in lending pool and receive aDAI in contract.
         // pool requires approval to move DAI
         dai.approve(poolAddress,100000e18);
         dai.approve(address(this),100000e18);
@@ -111,6 +116,8 @@ contract BrightLink_v01 is ChainlinkClient {
 
 
     function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner{
+        // weights for averaging oracle data
+        // eventually, weights could be set by voting ina DAO
 
         w1 = _w1;
         w2 = _w2;
@@ -119,7 +126,8 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
     function requestDataFromAPI() public onlyOwner{
-
+        // calls the oracleRequest function with each URL
+        // aggregation happens inside fulfill() function
         oracleRequest(APIaddresses[0]);
         oracleRequest(APIaddresses[1]);
         oracleRequest(APIaddresses[2]);
@@ -129,6 +137,8 @@ contract BrightLink_v01 is ChainlinkClient {
 
     function oracleRequest(string memory url) internal returns (bytes32 requestId) 
     {
+        // oracle request happens here. URL is passed as var url
+        // args are jobID, callback address (this contract) and fulfill function from this contract
         Chainlink.Request memory request = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
         
         // Set the URL to perform the GET request on
@@ -139,20 +149,19 @@ contract BrightLink_v01 is ChainlinkClient {
         return sendChainlinkRequestTo(oracle, request, fee);
     }
 
-    function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId)
-    
-    {
+    function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId){
 
+        // assign data from oracle to position in oracleData array
         oracleData[index] = _value; 
-        // This ensures the array never goes past 3, we just keep rotating responses
+        // iterate through array indexes
         index++;
-        
+        // calculate weighted mean of data in oracleData array
         aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
 
     }
 
     function viewValueFromOracle() public view returns(uint256 viewValue){
-        
+        //  show aggregated orace data to user
         viewValue = aggregateData;
     }
 
@@ -196,7 +205,9 @@ contract BrightLink_v01 is ChainlinkClient {
 
 
     function escapeHatch() public onlyOwner{
-
+        // for testing purposes, if all gone wrong, retrieve funds
+        // to save having to get more from faucets
+        
         if (dai.balanceOf(address(this))>0){
             require(dai.transfer(owner,dai.balanceOf(address(this))));
         }

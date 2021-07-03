@@ -26,7 +26,7 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
 
     contract = getDeployedContract
 
-    link.transfer(contract,0.2e18,{'from':load_owner})
+    link.transfer(contract,0.3e18,{'from':load_owner})
     assert link.balanceOf(contract)!=0
 
     dai.transfer(contract,set_deposit_amount,{'from':load_donor})
@@ -38,6 +38,8 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     contract.depositFundsToAave({'from':load_owner})
     assert dai.balanceOf(contract)==0
     assert adai.balanceOf(contract)!=0
+
+    contract.setWeights(100,100,100,{'from':load_owner})
     
     time.sleep(30)
 
