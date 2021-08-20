@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at '0x977B818C4df8559f76241Ce45ad856520d3B363c'
+// this contract is deployed on Kovan at '0xf1EDeD3ACF4E5D1125Ce740eE1f978B43f5DB2bc'
 
 pragma solidity ^0.6.6;
 
@@ -152,6 +152,7 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
     function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId){
+        // fulfill will be called 3x, 1x for each call to OracleRequest (via this.fulfill.selector arg)
 
         // assign data from oracle to position in oracleData array
         oracleData[index] = _value; 
@@ -160,6 +161,7 @@ contract BrightLink_v01 is ChainlinkClient {
         // calculate weighted mean of data in oracleData array
         aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
     }
+
 
     function validateOracleData() public {    
         // ensures a sufficient number of oracles return valid data
