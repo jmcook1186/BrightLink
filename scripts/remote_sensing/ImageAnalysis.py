@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def setupGEE(coords, platform):
+def setupGEE(coords, platform, startDate, endDate):
 
     # init the ee object
     ee.Initialize()
@@ -20,16 +20,31 @@ def setupGEE(coords, platform):
         platformPath = "COPERNICUS/S2"
         BandLong = 'B8'
         BandShort = 'B4'
+    
     elif platform == 'LANDSAT':
         platformPath = "LANDSAT/LC08/C01/T1_TOA"
         BandLong = 'B5'
         BandShort = 'B4'
+    
+    elif platform == 'MODIS':
+        platformPath = "MODIS/MOD09GA_006_NDVI"
+        BandLong = None
+        BandShort = None
+    else:
+        raise ValueError("please select a valid platform from: MODIS, SENTINEL2, LANDSAT")
 
     # define the image
-    collection = ee.ImageCollection(platformPath).filterBounds(area)\
-                                        .filterDate("2021-05-01","2021-08-31")\
-                                        .select([BandLong, BandShort])
+    if (platform == "SENTINEL2") or (platform == "LANDSAT"):
+
+        collection = ee.ImageCollection(platformPath).filterBounds(area)\
+                                            .filterDate(startDate, endDate)\
+                                            .select([BandLong, BandShort])
     
+    elif platform == "MODIS":
+        collection = ee.ImageCollection(platformPath)\
+                  .filter(ee.Filter.date(startDate, endDate))
+
+        
     print(" number of image: ",collection.size().getInfo())
     if collection.size().getInfo() == 0:
         raise ValueError("There are no valid images for this area/date combination")
@@ -64,7 +79,8 @@ def LatLonImg(img, area):
     return lats, lons, data
 
 
-    # covert the lat, lon and array into an image
+
+# covert the lat, lon and array into an image
 def toImage(lats,lons,data):
 
     # get the unique coordinates
@@ -92,13 +108,15 @@ def toImage(lats,lons,data):
     return arr
     
 
-def runAnalysis(collection, platform, savepath, area, plot):
+def runAnalysis(collection, platform, score_type, savepath, area, plot):
     
     # map over the image collection
-    if platform == 'SENTINEL2':
+    if platform == "SENTINEL2":
         myCollection  = collection.map(ndvi_S2)
-    elif platform == 'LANDSAT':
+    elif platform == "LANDSAT":
         myCollection = collection.map(ndvi_LANDSAT)
+    elif platform == "MODIS":
+        myCollection = collection
     
     # get the median
     result = ee.Image(myCollection.median()).rename(['result'])
@@ -108,7 +126,14 @@ def runAnalysis(collection, platform, savepath, area, plot):
     
     # 1d to 2d array
     image  = toImage(lat,lon,data)
-    ndvi_score = (np.size(image[image>0.5])/np.size(image))*100
+    if score_type == "count":
+        ndvi_score = (np.size(image[image>0.5])/np.size(image))*100
+    elif score_type == "median":
+        ndvi_score = np.median(image)*100
+    elif score_type == "mean":
+        ndvi_score = np.mean(image)*100
+
+    print("NDVI score = ",ndvi_score)
 
     if plot:
         import matplotlib.pyplot as plt
