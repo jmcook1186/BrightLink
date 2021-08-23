@@ -119,7 +119,7 @@ def runAnalysis(collection, platform, score_type, savepath, area, plot):
         myCollection = collection
     
     # get the median
-    result = ee.Image(myCollection.median()).rename(['result'])
+    result = ee.Image(myCollection.mean()).rename(['result'])
     
     # get the lon, lat and result as 1d array
     lat, lon, data = LatLonImg(result, area)

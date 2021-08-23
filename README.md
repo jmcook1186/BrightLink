@@ -1,40 +1,23 @@
 # BRIGHTLINK
 
-*NB: This repository is in active development and does not yet have full functionality.
+Brightlink is a PoC project that shows how communities can be incentivized to "brighten" their local environments. There are two examples implemented in this repository:
 
-July 2021: payouts now triggered by aggregate (weighted mean) of 3 chainlink oracle requests
-June 2021: Only v1 of the financial model is actually implemented in the repository.
+2) A community is incentivized to "green" their local environment by conserving and adding vegetated land (replanting verges, rooftop gardens, etc..) and engaging in urban agriculture. This is measured by quantifying the NDVI chlorophyll index across the area of interest using multispectral data from three satellites (MODIS, LANDSAT, Sentinel2).
+
+3) Environmental organizations are incentivized to "brighten" snow, ice and sea ice surfaces to slow their rate of melting. This is currently achieved occasionally using light-scattering sand or strategically-placed white sheets and has the effect of slowing sea ice retreat and prolonging the life of snowpacks for ski resorts etc. The degree to which brightening occurs will be determined as a function of the deviation in the surface albedo derived from Sentinel-2 imagery relative to a baseline.
+
+The general model is that a donor defines a reward, target and time period, for example they may propose that a 10,000 DAI reward is available for a 15% increase in the detectable vegetation in a town over summer (June-August). This becomes encoded logic in the BrightLink smart contract. This includes the previous year's data being generated as a baseline to compare against by running the geospatial processing scripts. After the set time period, the scripts are run again to get updated estimates. If the updated data is sufficiently improved against the baseline, then the donated DAI is paid out to the community wallet. If not, the DAI is returned to the donor. In between times, the DAI is held in an Aave lending pool, generating profit for the BrightLink platform.
 
 Ongoing blog posts about this project development can be found at [www.tothepoles.co.uk/](https://tothepoles.co.uk/category/eolink/)*
 
-
-## Outline
-This system incentivizes hypothetical communities to "brighten" their local environment. There are two use-cases in this repository:
-
-### Purpose
-
-1) Environmental organizations are incentivized to "brighten" snow, ice and sea ice surfaces to slow their rate of melting. This is currently achieved occasionally using light-scattering sand or strategically-placed white sheets and has the effect of slowing sea ice retreat and prolonging the life of snowpacks for ski resorts etc. The degree to which brightening occurs will be determined as a function of the deviation in the surface albedo derived from Sentinel-2 imagery relative to a baseline.
-
-2) A community is incentivized to "green" their local environment by conserving and adding vegetated land (replanting verges, rooftop gardens, etc..). The payout is scaled by the % change in "green" area within the area of interest. The surface greening calculation is achieved using a supervised classification algorithm applied to multispectral Sentinel-2 satellite data.
-
-3) Other applications could include incentivizing beach clean-ups by remotely quantifying beach litter using drone data, etc
-
-
-### Financial Model
-
-The initial capital comes from a donor individual or organization who wishes to incentivizes a second organization or individual to brighten a specific area of interest. This initial donation is sent into escrow in the BrightLink Solidity contract in DAI.
-
-The contract then places those in a DeFi strategy where they accrue interest. The interest is profit for the contract owner, generating income without decrementing the initial donated capital. When the consumer organization triggers a settlement, or some predetermined time has elapsed, the funds are pulled from the Aave pool, the interest that accrued is released to the contract owner as profit, and the initial capital remains in escrow in the contract, ready to be paid out at a rate that depends on the degree to which the consumer has achieved its goals.</p>
-
 ### Mechanism
-
 
 The contract contains a function that triggers a Chainlink oracle to make a GET request to an API endpoint. That API endpoint is a json file that contains the results of a satellite remote sensing script run externally. When the remote sensing script finishes executing it updates the json file with the most recent remote sensing data. On request, the chainlink oracle ingests that data into the smart contract. This happens twice - first to establish an initial baseline which becomes the target value for the consumer organization to try to beat. Then, after some predetermined time has passed, the contract is called again and the updated remote sensing data is used to determine the amount of DAI that should be removed from the Aave pool and paid out. 
 
 ### Remote Sensing
 
+For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has mre cloudy images, etc).
 
-Precise details of the remote sensing app are TBC, but I intend to build a Sentinel-2 supervised classification scheme and chlorophyll-index calculation to determine surface greening, and a narrow-broadband albedo calculation to determine surface brightening. The result will be some spatial statistic (e.g. area-mean albedo, total chlorophyll) compared to a baseline value.
 
 
 ## Prerequisites
@@ -78,6 +61,15 @@ export PRIVATE_KEY=<PRIVATE_KEY>
    See instructions [here](https://faucet.kovan.network/) and [here](https://docs.chain.link/docs/acquire-link/)
 
 
+5. Google Earth Engine
+   you need a GEE account and the GEE packages installed in the development environment
+
+6. GIT
+   A Github account with the auth token in .env
+
+
+
+
 ## Testing
 
 Testing is achieved using pytest in brownie. I have not yet written any mocks, so all tests use the contracts deployed on the Kovan testnet. Fixtures (configuration common to all tests) are defined in conftest.py and unit tests are defined in test_flood_insurance.py. To run the tests from the terminal, navigate to the project folder, then:
@@ -104,4 +96,4 @@ Explainers for this specific repository:
 
 ## License
 
-This project is licensed under the [MIT license](LICENSE).# BrightLink
+This project is licensed under the [MIT license](LICENSE).
