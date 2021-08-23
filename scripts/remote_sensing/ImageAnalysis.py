@@ -8,30 +8,46 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def setupGEE(coords):
+def setupGEE(coords, platform):
 
     # init the ee object
     ee.Initialize()
     
     area = ee.Geometry.Polygon([coords],None,False)
 
+    # select platform
+    if platform =='SENTINEL2':
+        platformPath = "COPERNICUS/S2"
+        BandLong = 'B8'
+        BandShort = 'B4'
+    elif platform == 'LANDSAT':
+        platformPath = "LANDSAT/LC08/C01/T1_TOA"
+        BandLong = 'B5'
+        BandShort = 'B4'
 
     # define the image
-    collection = ee.ImageCollection("COPERNICUS/S2").filterBounds(area)\
-                                        .filterDate("2021-07-01","2021-07-31")\
-                                        .filterMetadata("CLOUDY_PIXEL_PERCENTAGE","less_than",50)\
-                                        .select(['B8', 'B4'])
+    collection = ee.ImageCollection(platformPath).filterBounds(area)\
+                                        .filterDate("2021-05-01","2021-08-31")\
+                                        .select([BandLong, BandShort])
     
     print(" number of image: ",collection.size().getInfo())
+    if collection.size().getInfo() == 0:
+        raise ValueError("There are no valid images for this area/date combination")
 
     return collection, area
 
 
 # perform any calculation on the image collection here
-def ndvi(img):
-    ndvi = ee.Image(img.normalizedDifference(['B8', 'B4'])).rename(["ndvi"])
+def ndvi_S2(img):
+    ndvi = ee.Image(img.normalizedDifference(['8', '4'])).rename(["ndvi"])
     return ndvi
-    
+
+
+def ndvi_LANDSAT(img):
+    ndvi = ee.Image(img.normalizedDifference(['B5','B4'])).rename(['ndvi'])
+    return ndvi
+
+
 # export the latitude, longitude and array
 def LatLonImg(img, area):
 
@@ -76,9 +92,13 @@ def toImage(lats,lons,data):
     return arr
     
 
-def runAnalysis(collection, savepath, area, plot):
+def runAnalysis(collection, platform, savepath, area, plot):
+    
     # map over the image collection
-    myCollection  = collection.map(ndvi)
+    if platform == 'SENTINEL2':
+        myCollection  = collection.map(ndvi_S2)
+    elif platform == 'LANDSAT':
+        myCollection = collection.map(ndvi_LANDSAT)
     
     # get the median
     result = ee.Image(myCollection.median()).rename(['result'])
@@ -88,15 +108,14 @@ def runAnalysis(collection, savepath, area, plot):
     
     # 1d to 2d array
     image  = toImage(lat,lon,data)
-    
     ndvi_score = (np.size(image[image>0.5])/np.size(image))*100
 
     if plot:
         import matplotlib.pyplot as plt
         plt.imshow(image)
         plt.colorbar()
-        plt.show()
-        plt.savefig(savepath)
+        print("saveing to {}".format(str(savepath+'image_ndvi.jpg')))
+        plt.savefig(str(savepath+'/image_ndvi.jpg'))
     
     return ndvi_score
 
