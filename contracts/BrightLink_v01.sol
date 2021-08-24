@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolAddressesProviderV2.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
-contract BrightLink_v01 is ChainlinkClient {
+contract BrightLink_v02 is ChainlinkClient {
 
     // var definitions
     uint256 public depositedFunds;
@@ -18,9 +18,6 @@ contract BrightLink_v01 is ChainlinkClient {
     address public adai_address;
     address public poolAddress;
     address public poolAddressProvider;
-    address private customer;
-    address private donor;
-    uint16 private threshold;
     uint256 public value;
     address private oracle; // oracle address
     bytes32 private jobID; // oracle jobID
@@ -38,19 +35,24 @@ contract BrightLink_v01 is ChainlinkClient {
     uint16 w3;
     uint16 minResponses = 2;
     uint16 badOracles = 0;
+    int Id = 0;
+    mapping(address => int) private customerToAgreementID;
+    mapping(address => int) private donorToAgreementID;
+    mapping(int => address) private agreementIdToDonor;
+    mapping(int => uint256) private agreementIdToBaseline;
+    mapping(int => uint256) private agreementIdToValue;
+
+
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
-    address _oracle, address _customer, address _donor, string memory _jobID, uint256 _fee, uint16 _threshold) public{
+    address _oracle, string memory _jobID, uint256 _fee) public{
         
         // var instantiations
         owner = msg.sender;
-        customer = _customer;
-        donor = _donor;
         depositedFunds = 0;
         dai_address = _dai_address;
         adai_address = _adai_address;
         poolAddressProvider = _poolAddressProvider;
-        threshold = _threshold;
         dai = IERC20(dai_address);
         adai = IERC20(adai_address);
         provider = ILendingPoolAddressesProviderV2(poolAddressProvider); 
@@ -59,12 +61,13 @@ contract BrightLink_v01 is ChainlinkClient {
         oracle = _oracle;
         jobID = stringToBytes32(_jobID);
         fee = _fee;
-        APIaddresses[0] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example.json";
-        APIaddresses[1] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example2.json";
-        APIaddresses[2] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/example3.json";
+        APIaddresses[0] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/BrightLinkData/SentinelData.json";
+        APIaddresses[1] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/BrightLinkData/LandsatData.json";
+        APIaddresses[2] = "https://raw.githubusercontent.com/jmcook1186/jmcook1186.github.io/main/Data/BrightLinkData/ModisData.json";
         oracleData[0] = 0;
         oracleData[1] = 0;
         oracleData[2] = 0;
+
 
         // set link token address depending on network
         if (_link == address(0)) {
@@ -73,6 +76,29 @@ contract BrightLink_v01 is ChainlinkClient {
             setChainlinkToken(_link);
         }
 
+    }
+
+    function addNewCustomer(address _customer, address _donor, uint256 _baseline, uint256 _value) public onlyOwner {
+
+        require(dai.transferFrom(_donor, address(this), _value));
+        customerToAgreementID[_customer] = Id;
+        donorToAgreementID[_donor] = Id;
+        agreementIdToBaseline[Id] = _baseline;
+        agreementIdToValue[Id] = _value;
+        agreementIdToDonor[Id]  = _donor;
+        Id+=1; 
+    }
+
+    function checkIdForCustomer(address _customer) public view returns(int){
+        return(customerToAgreementID[_customer]);
+    }
+
+    function checkIdForDonor(address _donor) public view returns(int){
+        return(donorToAgreementID[_donor]);
+    }
+
+    function checkvalueForAgreementId(int agreementId) public view returns(uint256){
+        return(agreementIdToValue[agreementId]);
     }
 
     function lockDepositBalance() public onlyOwner{
@@ -105,7 +131,6 @@ contract BrightLink_v01 is ChainlinkClient {
         
     }
 
-
     function WithdrawFundsFromAave() public onlyOwner {
     	
     	// swap aDAI in contract for DAI
@@ -115,7 +140,6 @@ contract BrightLink_v01 is ChainlinkClient {
         lendingPool.withdraw(dai_address, adai.balanceOf(address(this)), address(this));
 
     }
-
 
     function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner{
         // weights for averaging oracle data
@@ -135,7 +159,6 @@ contract BrightLink_v01 is ChainlinkClient {
         oracleRequest(APIaddresses[2]);
     
     }
-
 
     function oracleRequest(string memory url) internal returns (bytes32 requestId) 
     {
@@ -182,8 +205,14 @@ contract BrightLink_v01 is ChainlinkClient {
     }
 
 
-    function retrieveDAI() public onlyOwner onlyForValidOracles{
+    function retrieveDAI(address _customer) public onlyOwner onlyForValidOracles{
         
+        int agreementId = customerToAgreementID[_customer];
+        uint256 amount = agreementIdToValue[agreementId];
+        uint256 threshold = agreementIdToBaseline[agreementId];
+        address donor = agreementIdToDonor[agreementId];
+        address customer = _customer;
+
         // send DAI from contract back to owner
         dai.approve(address(this), depositedFunds);
         dai.approve(customer, depositedFunds);
