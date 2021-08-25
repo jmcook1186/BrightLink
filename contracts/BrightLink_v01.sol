@@ -78,14 +78,22 @@ contract BrightLink_v02 is ChainlinkClient {
 
     }
 
+    /**
+    @dev
+    requires donor to approve dai transfer before function is called:
+    dai.approve(contract,200e18,{'from':donor})
+
+     */
     function addNewCustomer(address _customer, address _donor, uint256 _baseline, uint256 _value) public onlyOwner {
 
         require(dai.transferFrom(_donor, address(this), _value));
+        depositedFunds += _value;
         customerToAgreementID[_customer] = Id;
         donorToAgreementID[_donor] = Id;
         agreementIdToBaseline[Id] = _baseline;
         agreementIdToValue[Id] = _value;
         agreementIdToDonor[Id]  = _donor;
+        depositFundsToAave();
         Id+=1; 
     }
 
@@ -99,11 +107,6 @@ contract BrightLink_v02 is ChainlinkClient {
 
     function checkvalueForAgreementId(int agreementId) public view returns(uint256){
         return(agreementIdToValue[agreementId]);
-    }
-
-    function lockDepositBalance() public onlyOwner{
-        // set total deposited DAI amount
-        depositedFunds = dai.balanceOf(address(this));
     }
 
     function checkDepositAmount() public view returns(uint256 deposit){
@@ -121,7 +124,7 @@ contract BrightLink_v02 is ChainlinkClient {
 
     }
 
-    function depositFundsToAave() public onlyOwner{
+    function depositFundsToAave() internal {
 	
         // Deposit dai in lending pool and receive aDAI in contract.
         // pool requires approval to move DAI
@@ -131,13 +134,13 @@ contract BrightLink_v02 is ChainlinkClient {
         
     }
 
-    function WithdrawFundsFromAave() public onlyOwner {
+    function WithdrawFundsFromAave(uint _amount) public onlyOwner {
     	
     	// swap aDAI in contract for DAI
         // pool requires approval to move aDAI
-        adai.approve(poolAddress,100000e18);
-        adai.approve(address(this), 100000e18);
-        lendingPool.withdraw(dai_address, adai.balanceOf(address(this)), address(this));
+        adai.approve(poolAddress, _amount);
+        adai.approve(address(this), _amount);
+        lendingPool.withdraw(dai_address, _amount, address(this));
 
     }
 
@@ -214,27 +217,30 @@ contract BrightLink_v02 is ChainlinkClient {
         address customer = _customer;
 
         // send DAI from contract back to owner
-        dai.approve(address(this), depositedFunds);
-        dai.approve(customer, depositedFunds);
-        dai.approve(donor, depositedFunds);
+        dai.approve(address(this), amount);
+        dai.approve(customer, amount);
 
         if (aggregateData > threshold){
             
-            require(dai.transfer(customer, depositedFunds));
+            require(dai.transfer(customer, amount));
             
             if (dai.balanceOf(address(this))>0){
-                require(dai.transfer(owner,dai.balanceOf(address(this))));
+                require(dai.transfer(owner,amount));
             }
         }
 
         else{
 
-            require(dai.transfer(donor, depositedFunds));
+            require(dai.transfer(donor, amount));
             
             if (dai.balanceOf(address(this))>0){
 
-                require(dai.transfer(owner, dai.balanceOf(address(this))));
+                require(dai.transfer(owner, amount));
             }
+
+        // set transaction value to 0 to prevent re-spending
+        agreementIdToValue[agreementId] = 0;
+
         }
 
     }
