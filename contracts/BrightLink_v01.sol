@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at '0xf1EDeD3ACF4E5D1125Ce740eE1f978B43f5DB2bc'
+// this contract is deployed on Kovan at 
 
 pragma solidity ^0.6.6;
 
@@ -28,7 +28,7 @@ contract BrightLink_v02 is ChainlinkClient {
     IERC20 public adai;
     ILendingPoolV2 public lendingPool;
     ILendingPoolAddressesProviderV2 public provider;
-    uint16 index = 0;
+    uint16 index;
     uint256 aggregateData;
     uint16 w1;
     uint16 w2;
@@ -41,8 +41,7 @@ contract BrightLink_v02 is ChainlinkClient {
     mapping(int => address) private agreementIdToDonor;
     mapping(int => uint256) private agreementIdToBaseline;
     mapping(int => uint256) private agreementIdToValue;
-
-
+    mapping (int => uint256) public agreementIdToRetrievedData;
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, string memory _jobID, uint256 _fee) public{
@@ -67,7 +66,6 @@ contract BrightLink_v02 is ChainlinkClient {
         oracleData[0] = 0;
         oracleData[1] = 0;
         oracleData[2] = 0;
-
 
         // set link token address depending on network
         if (_link == address(0)) {
@@ -97,39 +95,13 @@ contract BrightLink_v02 is ChainlinkClient {
         Id+=1; 
     }
 
-    function checkIdForCustomer(address _customer) public view returns(int){
-        return(customerToAgreementID[_customer]);
-    }
-
-    function checkIdForDonor(address _donor) public view returns(int){
-        return(donorToAgreementID[_donor]);
-    }
-
-    function checkvalueForAgreementId(int agreementId) public view returns(uint256){
-        return(agreementIdToValue[agreementId]);
-    }
-
-    function checkDepositAmount() public view returns(uint256 deposit){
-        // view function to show user how much DAI was deposited
-        deposit = depositedFunds;
-    }
-
-    function checkBalance() public view returns (uint256 dai_balance, uint256 adai_balance) {
-        
-        // balance of DAI and aDAI in contract
-        // aDAI is the debt token from the Aave pool
-        
-        dai_balance = dai.balanceOf(address(this));
-        adai_balance = adai.balanceOf(address(this));
-
-    }
 
     function depositFundsToAave() internal {
 	
         // Deposit dai in lending pool and receive aDAI in contract.
         // pool requires approval to move DAI
-        dai.approve(poolAddress,100000e18);
-        dai.approve(address(this),100000e18);
+        dai.approve(poolAddress,1000000e18);
+        dai.approve(address(this),1000000e18);
         lendingPool.deposit(dai_address, dai.balanceOf(address(this)), address(this), referral);
         
     }
@@ -154,73 +126,43 @@ contract BrightLink_v02 is ChainlinkClient {
 
     }
 
-    function requestDataFromAPI() public onlyOwner{
-        // calls the oracleRequest function with each URL
-        // aggregation happens inside fulfill() function
-        oracleRequest(APIaddresses[0]);
-        oracleRequest(APIaddresses[1]);
-        oracleRequest(APIaddresses[2]);
-    
-    }
 
-    function oracleRequest(string memory url) internal returns (bytes32 requestId) 
-    {
-        // oracle request happens here. URL is passed as var url
-        // args are jobID, callback address (this contract) and fulfill function from this contract
-        Chainlink.Request memory request = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
+    function setBaseLine(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
         
-        // Set the URL to perform the GET request on
-        request.add("get", url);
-        request.add("path", "data.0.number");
+        int id = customerToAgreementID[_customer];
+        setWeights(_w1, _w2, _w3);
+        requestDataFromAPI();
+        validateOracleData();
+        agreementIdToBaseline[id] = aggregateData;
+
+    }
+
+
+    function UpdateOracleData(address _customer) public onlyOwner {
         
-        // Sends the request
-        return sendChainlinkRequestTo(oracle, request, fee);
-    }
-
-    function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId){
-        // fulfill will be called 3x, 1x for each call to OracleRequest (via this.fulfill.selector arg)
-
-        // assign data from oracle to position in oracleData array
-        oracleData[index] = _value; 
-        // iterate through array indexes
-        index++;
-        // calculate weighted mean of data in oracleData array
-        aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
-    }
-
-
-    function validateOracleData() public {    
-        // ensures a sufficient number of oracles return valid data
-        // avoids accidentally centralizing workflow by relying on 1 oracle
-
-        for (uint16 i = 0; i<oracleData.length; i++) {  //for loop example
-            if (oracleData[i] ==0){
-
-                badOracles++;
-            } 
-        }
+        int id = customerToAgreementID[_customer];
+        requestDataFromAPI();
+        validateOracleData();
+        agreementIdToRetrievedData[id] = aggregateData;
 
     }
 
-    function viewValueFromOracle() public view returns(uint256 viewValue){
-        //  show aggregated orace data to user
-        viewValue = aggregateData;
-    }
 
 
-    function retrieveDAI(address _customer) public onlyOwner onlyForValidOracles{
+    function settleAgreement(address _customer) public onlyOwner onlyForValidOracles{
         
         int agreementId = customerToAgreementID[_customer];
         uint256 amount = agreementIdToValue[agreementId];
         uint256 threshold = agreementIdToBaseline[agreementId];
         address donor = agreementIdToDonor[agreementId];
         address customer = _customer;
+        uint256 retrieval = agreementIdToRetrievedData[agreementId];
 
         // send DAI from contract back to owner
         dai.approve(address(this), amount);
         dai.approve(customer, amount);
 
-        if (aggregateData > threshold){
+        if (retrieval > threshold){
             
             require(dai.transfer(customer, amount));
             
@@ -275,7 +217,104 @@ contract BrightLink_v02 is ChainlinkClient {
     }
 
 
-    // ACCESSORY FUNCTIONS
+
+
+    ////////////////////////////
+    // INTERNAL ORACLE REQUEST FUNCS
+
+        function requestDataFromAPI() internal onlyOwner{
+        // calls the oracleRequest function with each URL
+        // aggregation happens inside fulfill() function
+
+        // require protects against aggregaData ==0 from forgetting to set weights
+        require(w1+w2+w3 != 0, "please set weights for aggregating oracle data");
+        
+        index = 0;
+        oracleRequest(APIaddresses[0]);
+        oracleRequest(APIaddresses[1]);
+        oracleRequest(APIaddresses[2]);
+    
+    }
+
+    function oracleRequest(string memory url) internal returns (bytes32 requestId) 
+    {   
+        // oracle request happens here. URL is passed as var url
+        // args are jobID, callback address (this contract) and fulfill function from this contract
+        Chainlink.Request memory request = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
+        
+        // Set the URL to perform the GET request on
+        request.add("get", url);
+        request.add("path", "data.0.number");
+        
+        // Sends the request
+        return sendChainlinkRequestTo(oracle, request, fee);
+    }
+
+    function fulfill(bytes32 _requestId, uint _value) public recordChainlinkFulfillment(_requestId){
+        // fulfill will be called 3x, 1x for each call to OracleRequest (via this.fulfill.selector arg)
+
+        // assign data from oracle to position in oracleData array
+        oracleData[index] = _value; 
+        // iterate through array indexes
+        index = index+1; // increment index
+        // calculate weighted mean of data in oracleData array
+        aggregateData = ((w1*oracleData[0]/100)+(w2*oracleData[1]/100)+(w3*oracleData[2]/100))/3;
+    }
+
+
+    function validateOracleData() internal {    
+        // ensures a sufficient number of oracles return valid data
+        // avoids accidentally centralizing workflow by relying on 1 oracle
+
+        for (uint16 i = 0; i<oracleData.length; i++) {  //for loop example
+            if (oracleData[i] ==0){
+
+                badOracles++;
+            } 
+        }
+
+    }
+
+
+
+
+
+
+    // VIEW FUNCS
+
+    function viewValueFromOracle() public view returns(uint256 viewValue){
+        //  show aggregated orace data to user
+        viewValue = aggregateData;
+    }
+
+    function checkIdForCustomer(address _customer) public view returns(int){
+        return(customerToAgreementID[_customer]);
+    }
+
+    function checkIdForDonor(address _donor) public view returns(int){
+        return(donorToAgreementID[_donor]);
+    }
+
+    function checkvalueForAgreementId(int agreementId) public view returns(uint256){
+        return(agreementIdToValue[agreementId]);
+    }
+
+    function checkDepositAmount() public view returns(uint256 deposit){
+        // view function to show user how much DAI was deposited
+        deposit = depositedFunds;
+    }
+
+    function checkBalance() public view returns (uint256 dai_balance, uint256 adai_balance) {
+        
+        // balance of DAI and aDAI in contract
+        // aDAI is the debt token from the Aave pool
+        
+        dai_balance = dai.balanceOf(address(this));
+        adai_balance = adai.balanceOf(address(this));
+
+    }
+
+    // MODIFIERS AND ACCESSORY FUNCTIONS
     
     modifier onlyOwner(){
         require(owner==msg.sender);
