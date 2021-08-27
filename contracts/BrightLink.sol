@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at 
+// this contract is deployed on Kovan at 0xbb3e97fB7B6570fDdA011665A0070a4C1a63c848
 
 pragma solidity ^0.6.6;
 
@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolAddressesProviderV2.sol";
 import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
-contract BrightLink_v02 is ChainlinkClient {
+contract BrightLink is ChainlinkClient {
 
     // var definitions
     uint256 public depositedFunds;
@@ -148,43 +148,55 @@ contract BrightLink_v02 is ChainlinkClient {
     }
 
 
+    function settleAgreement(address _customer) public onlyOwner {
 
-    function settleAgreement(address _customer) public onlyOwner onlyForValidOracles{
-        
+        // get ID from customer address
         int agreementId = customerToAgreementID[_customer];
+
+        // ensure a baseline and an updated retrieval have been created
+        // ensure >=2/3 oracles returned valid data
+        require(agreementIdToRetrievedData[_customer]!=0);
+        require(agreementIdToBaseline[_customer]!=0);
+        require(badOracles<minResponses);
+
         uint256 amount = agreementIdToValue[agreementId];
         uint256 threshold = agreementIdToBaseline[agreementId];
         address donor = agreementIdToDonor[agreementId];
-        address customer = _customer;
         uint256 retrieval = agreementIdToRetrievedData[agreementId];
-
-        // send DAI from contract back to owner
-        dai.approve(address(this), amount);
-        dai.approve(customer, amount);
 
         if (retrieval > threshold){
             
             require(dai.transfer(customer, amount));
-            
-            if (dai.balanceOf(address(this))>0){
-                require(dai.transfer(owner,amount));
-            }
-        }
 
         else{
 
-            require(dai.transfer(donor, amount));
-            
-            if (dai.balanceOf(address(this))>0){
+            require(dai.transfer(donor, amount));            
 
-                require(dai.transfer(owner, amount));
-            }
-
+        // subtract expended amount from the running total of deposits
+        depositedFunds-= agreementIdToValue[agreementId]
+        
         // set transaction value to 0 to prevent re-spending
         agreementIdToValue[agreementId] = 0;
 
         }
 
+    }
+
+    function takeProfits() public only Owner {
+        // withdraws enough dai from Aave pool to equal the total
+        // accumulated profit and transfers it to the owners wallet
+        // always persists enough adai in contract to payout all
+        // active agreements
+
+        totalAmount = adai.balanceOf(this(address))
+        profit = totalAmount - depositedFunds;
+        
+        if (dai.balanceOf(address(this)) < profit){
+            WithdrawFundsFromAave(profit-dai.balanceOf(address(this)));
+        }
+        
+        require(dai.transfer(owner,profit));
+    
     }
 
     function retrieveLINK() public onlyOwner{
@@ -219,6 +231,8 @@ contract BrightLink_v02 is ChainlinkClient {
 
 
 
+
+
     ////////////////////////////
     // INTERNAL ORACLE REQUEST FUNCS
 
@@ -235,6 +249,7 @@ contract BrightLink_v02 is ChainlinkClient {
         oracleRequest(APIaddresses[2]);
     
     }
+
 
     function oracleRequest(string memory url) internal returns (bytes32 requestId) 
     {   
@@ -274,8 +289,6 @@ contract BrightLink_v02 is ChainlinkClient {
         }
 
     }
-
-
 
 
 
@@ -321,10 +334,6 @@ contract BrightLink_v02 is ChainlinkClient {
         _;
     }
     
-    modifier onlyForValidOracles(){
-        require(badOracles<minResponses,"INSUFFICIENT VALID ORACLE RESPONSES: WITHDRAWAL PROHIBITED");
-       _;
-    }
 
     function stringToBytes32(string memory source) public pure returns (bytes32 result) {
         bytes memory tempEmptyStringTest = bytes(source);

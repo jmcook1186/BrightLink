@@ -7,6 +7,8 @@ coords = [[1.3985, 51.3836],\
          [1.3766, 51.3899],\
          [1.3985, 51.3899]]
 
+##analysisType = "ALBEDO" #or "NVDI"
+
 startDate = "2021-06-01"
 endDate = "2021-08-31"
 
@@ -20,6 +22,8 @@ elif platform == 'LANDSAT':
     filepath = "/home/joe/Code/jmcook1186.github.io/Data/BrightLinkData/LandsatData.json"
 elif platform == 'MODIS':
     filepath = "/home/joe/Code/jmcook1186.github.io/Data/BrightLinkData/ModisData.json"
+
+
 
 collection, area = setupGEE(coords, platform, startDate, endDate)
 ndvi_score = runAnalysis(collection, platform, score_type, savepath, area, plot=True)
