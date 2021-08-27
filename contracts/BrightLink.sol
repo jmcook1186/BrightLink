@@ -10,7 +10,6 @@ import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
 contract BrightLink is ChainlinkClient {
 
-    // var definitions
     uint256 public depositedFunds;
     address private owner;
     uint16 private referral = 0;
@@ -78,8 +77,14 @@ contract BrightLink is ChainlinkClient {
 
     /**
     @dev
-    requires donor to approve dai transfer before function is called:
+    Add new customer to contract. Adds customer to mappings, generates new 
+    agreementId. Triggers deposit of funds to Aave pool to begin accruing yield. Adds value to
+    cumulative deposits.
+    
+    Requires remote sensing scripts to have been run to estabish baseline data at API endpoints
+    Requires donor to approve dai transfer before function is called:
     dai.approve(contract,200e18,{'from':donor})
+    
 
      */
     function addNewCustomer(address _customer, address _donor, uint256 _baseline, uint256 _value) public onlyOwner {
@@ -96,29 +101,40 @@ contract BrightLink is ChainlinkClient {
     }
 
 
+
+    /**
+    @dev
+    internal func called by addNewCustomer()
+    sends all dai in contract to Aave lending pool,
+    returning aDai
+     */
     function depositFundsToAave() internal {
-	
-        // Deposit dai in lending pool and receive aDAI in contract.
-        // pool requires approval to move DAI
+
         dai.approve(poolAddress,1000000e18);
         dai.approve(address(this),1000000e18);
         lendingPool.deposit(dai_address, dai.balanceOf(address(this)), address(this), referral);
         
     }
 
+    /**
+    @dev
+    returns accumulated aDai to Aave pool, retrieving Dai at 1:1
+     */
     function WithdrawFundsFromAave(uint _amount) public onlyOwner {
     	
-    	// swap aDAI in contract for DAI
-        // pool requires approval to move aDAI
         adai.approve(poolAddress, _amount);
         adai.approve(address(this), _amount);
         lendingPool.withdraw(dai_address, _amount, address(this));
 
     }
 
-    function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner{
-        // weights for averaging oracle data
-        // eventually, weights could be set by voting ina DAO
+    /**
+    @dev 
+    internal, called by setBaseLine() and UpdateOracleData()
+    sets weighting for aggregating the oracle data
+    default is to trust all oracles equally (100,100,100)
+     */
+    function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) internal onlyOwner{
 
         w1 = _w1;
         w2 = _w2;
@@ -126,7 +142,10 @@ contract BrightLink is ChainlinkClient {
 
     }
 
-
+    /**
+    @dev
+    assumes remote sensing scripts have been run setting basline data at the API endpoints
+     */
     function setBaseLine(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
         
         int id = customerToAgreementID[_customer];
@@ -137,10 +156,14 @@ contract BrightLink is ChainlinkClient {
 
     }
 
-
-    function UpdateOracleData(address _customer) public onlyOwner {
+    /**
+    @dev
+    assumes remote sensing scripts have been run a second time, updating the API endpoints
+     */
+    function UpdateOracleData(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
         
         int id = customerToAgreementID[_customer];
+        setWeights(_w1, _w2, _w3);
         requestDataFromAPI();
         validateOracleData();
         agreementIdToRetrievedData[id] = aggregateData;
@@ -148,6 +171,12 @@ contract BrightLink is ChainlinkClient {
     }
 
 
+    /**
+    @dev
+    settles the agreement for a given customer by checking the
+    agreed value and paying it to the customer's wallet if the
+    updated values exceeds the baseline. Otherwise, return to donor.
+     */
     function settleAgreement(address _customer) public onlyOwner {
 
         // get ID from customer address
@@ -182,11 +211,15 @@ contract BrightLink is ChainlinkClient {
 
     }
 
+
+    /**
+    @dev
+    withdraws enough dai from Aave pool to equal the total
+    accumulated profit and transfers it to the owners wallet
+    always persists enough adai in contract to payout all
+    active agreements
+     */
     function takeProfits() public only Owner {
-        // withdraws enough dai from Aave pool to equal the total
-        // accumulated profit and transfers it to the owners wallet
-        // always persists enough adai in contract to payout all
-        // active agreements
 
         totalAmount = adai.balanceOf(this(address))
         profit = totalAmount - depositedFunds;
@@ -199,12 +232,13 @@ contract BrightLink is ChainlinkClient {
     
     }
 
+    /**
+    @dev
+    release any spare LINK to the contrat owner
+     */
     function retrieveLINK() public onlyOwner{
         
-        // instantiate LINK token
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-
-        // transfer remaining contract LINK balance to sender
         require(link.transfer(owner, link.balanceOf(address(this))), "Unable to transfer");
     }
 
