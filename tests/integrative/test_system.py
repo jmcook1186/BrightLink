@@ -1,3 +1,4 @@
+
 import pytest
 import time
 from brownie import (
@@ -13,12 +14,18 @@ def test_initial_balances(load_customer, getDeployedContract):
 
     assert dai.balanceOf(contract) ==0
     assert adai.balanceOf(contract)==0
-    assert dai.balanceOf(load_customer)==0
+
+    return
+
+def test_approvals(load_donor, getDeployedContract, set_deposit_amount):
+    
+    dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
+    dai.approve(getDeployedContract, set_deposit_amount, {'from':load_donor})
 
     return
 
 
-def test_system(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor, set_threshold):
+def test_system(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
@@ -26,53 +33,50 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
 
     contract = getDeployedContract
 
-    link.transfer(contract,0.3e18,{'from':load_owner})
-    assert link.balanceOf(contract)!=0
+    link.transfer(contract,0.6e18,{'from':load_owner})
+    assert link.balanceOf(contract)== 0.6e18
 
-    dai.transfer(contract,set_deposit_amount,{'from':load_donor})
-    assert dai.balanceOf(contract) == set_deposit_amount
-
-    contract.lockDepositBalance({'from':load_owner})
-    assert contract.checkBalance()[0] == set_deposit_amount
-
-    contract.depositFundsToAave({'from':load_owner})
-    assert dai.balanceOf(contract)==0
-    assert adai.balanceOf(contract)!=0
-
-    contract.setWeights(100,100,100,{'from':load_owner})
+    dai.approve(contract,set_deposit_amount,{'from':load_donor})
+    contract.addNewCustomer(load_customer, load_donor, set_deposit_amount, {'from': load_owner})
     
-    time.sleep(30)
 
-    contract.requestDataFromAPI({'from':load_owner})
-    trigger = contract.viewValueFromOracle()
-    assert trigger != 0
+    assert contract.checkIdForCustomer(load_customer)==0
+    assert contract.checkvalueForAgreementId(0)==set_deposit_amount
+    assert dai.balanceOf(contract) == 0
+    assert adai.balanceOf(contract) >= set_deposit_amount
+    assert contract.checkBalance()[0] == 0
+    assert contract.checkBalance()[1] >= set_deposit_amount
 
-    contract.validateOracleData({'from':load_owner})
 
-    contract.WithdrawFundsFromAave({'from': load_owner})
-    assert dai.balanceOf(contract)>set_deposit_amount
-    assert adai.balanceOf(contract)==0
 
-    initialOwnerBalance = dai.balanceOf(load_owner)
-    initialCustomerBalance = dai.balanceOf(load_customer)
-    initialDonorBalance = dai.balanceOf(load_donor)
+    contract.setBaseLine(load_customer,100,100,100,{'from':load_owner})
+    time.sleep(10)
+    baseline = contract.viewValueFromOracle() 
 
-    contract.retrieveDAI({'from':load_owner})
+    bal = contract.checkBalance()[1]
+    contract.takeProfits({'from':load_owner})
+    newbal = contract.checkBalance()[1]
+    assert bal > newbal
+    newbal==set_deposit_amount
 
-    if trigger > set_threshold:
+    contract.UpdateOracleData(load_customer, 100,100,100, {'from': load_owner})
+    time.sleep(10)
+    oracleData = contract.viewValueFromOracle()
 
-        assert adai.balanceOf(contract) == 0
-        assert dai.balanceOf(contract) == 0
-        assert dai.balanceOf(load_owner) > initialOwnerBalance
-        assert dai.balanceOf(load_customer) == initialCustomerBalance+set_deposit_amount
-        assert dai.balanceOf(load_donor) == initialDonorBalance
-    
+    print("baseline: ", baseline)
+    print("updated data: ", oracleData)
+
+    preSettleBalCust = dai.balanceOf(load_customer)
+    preSettleBalDonor = dai.balanceOf(load_donor)
+    contract.settleAgreement(load_customer, {'from': load_owner})
+    postSettleBalCust = dai.balanceOf(load_customer)
+    postSettleBalDonor = dai.balanceOf(load_donor)
+
+    if oracleData > baseline:
+        assert preSettleBalCust < postSettleBalCust
+
     else:
-        assert adai.balanceOf(contract) == 0
-        assert dai.balanceOf(contract) == 0
-        assert dai.balanceOf(load_owner) > initialOwnerBalance
-        assert dai.balanceOf(load_customer) == initialCustomerBalance
-        assert dai.balanceOf(load_donor) == initialDonorBalance+set_deposit_amount
+        assert preSettleBalDonor < postSettleBalDonor
 
     # reset wallet balances before next iteration
 

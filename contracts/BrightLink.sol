@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at 0xbb3e97fB7B6570fDdA011665A0070a4C1a63c848
+// this contract is deployed on Kovan at 0xa442852B9B9A92B277E6aF0FDcAe986EAa1986B3
 
 pragma solidity ^0.6.6;
 
@@ -10,21 +10,22 @@ import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
 
 contract BrightLink is ChainlinkClient {
 
+
+    uint16 private constant referral = 0;
+    address private immutable oracle; 
+    bytes32 private immutable jobID;
+    uint256 private immutable fee;
+    IERC20 public immutable dai;
+    IERC20 public immutable adai;
     uint256 public depositedFunds;
     address private owner;
-    uint16 private referral = 0;
     address public dai_address;
     address public adai_address;
     address public poolAddress;
     address public poolAddressProvider;
     uint256 public value;
-    address private oracle; // oracle address
-    bytes32 private jobID; // oracle jobID
-    uint256 private fee; // oracle fee
     string[3] public APIaddresses; 
     uint256[3] public oracleData;
-    IERC20 public dai;
-    IERC20 public adai;
     ILendingPoolV2 public lendingPool;
     ILendingPoolAddressesProviderV2 public provider;
     uint16 index;
@@ -84,22 +85,27 @@ contract BrightLink is ChainlinkClient {
     Requires remote sensing scripts to have been run to estabish baseline data at API endpoints
     Requires donor to approve dai transfer before function is called:
     dai.approve(contract,200e18,{'from':donor})
+    Approving _value only (rather than unlimited approval) protects against any re-entrancy attack.
     
+    Removed onlyOwner modifier so anyone can add an agreement if paid for by a donor. Requires
+    donor to have approved a DAI transfer of value >= _value.
 
      */
-    function addNewCustomer(address _customer, address _donor, uint256 _baseline, uint256 _value) public onlyOwner {
+    function addNewCustomer(address _customer, address _donor, uint256 _value) public {
 
+        // require that the customer does not have an existing agreement
+        require(customerToAgreementID[_customer] <= 0,"customer already exists");
+        // use require to ensure no agreement is estabished unless transaction succeeds
         require(dai.transferFrom(_donor, address(this), _value));
+    
         depositedFunds += _value;
         customerToAgreementID[_customer] = Id;
         donorToAgreementID[_donor] = Id;
-        agreementIdToBaseline[Id] = _baseline;
         agreementIdToValue[Id] = _value;
         agreementIdToDonor[Id]  = _donor;
         depositFundsToAave();
         Id+=1; 
     }
-
 
 
     /**
@@ -112,7 +118,8 @@ contract BrightLink is ChainlinkClient {
 
         dai.approve(poolAddress,1000000e18);
         dai.approve(address(this),1000000e18);
-        lendingPool.deposit(dai_address, dai.balanceOf(address(this)), address(this), referral);
+        lendingPool.deposit(dai_address,
+        dai.balanceOf(address(this)), address(this), referral);
         
     }
 
@@ -144,7 +151,7 @@ contract BrightLink is ChainlinkClient {
 
     /**
     @dev
-    assumes remote sensing scripts have been run setting basline data at the API endpoints
+    assumes remote sensing scripts have been run setting baseline data at the API endpoints
      */
     function setBaseLine(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
         
@@ -182,35 +189,31 @@ contract BrightLink is ChainlinkClient {
         // get ID from customer address
         int agreementId = customerToAgreementID[_customer];
 
-        // ensure a baseline and an updated retrieval have been created
-        // ensure >=2/3 oracles returned valid data
-        require(agreementIdToRetrievedData[_customer]!=0);
-        require(agreementIdToBaseline[_customer]!=0);
-        require(badOracles<minResponses);
-
         uint256 amount = agreementIdToValue[agreementId];
         uint256 threshold = agreementIdToBaseline[agreementId];
         address donor = agreementIdToDonor[agreementId];
         uint256 retrieval = agreementIdToRetrievedData[agreementId];
 
+        WithdrawFundsFromAave(amount);
+
         if (retrieval > threshold){
             
-            require(dai.transfer(customer, amount));
+            require(dai.transfer(_customer, amount));
+        }
 
         else{
 
-            require(dai.transfer(donor, amount));            
+            require(dai.transfer(donor, amount));   
+        }         
 
         // subtract expended amount from the running total of deposits
-        depositedFunds-= agreementIdToValue[agreementId]
+        depositedFunds-= agreementIdToValue[agreementId];
         
         // set transaction value to 0 to prevent re-spending
         agreementIdToValue[agreementId] = 0;
 
-        }
 
     }
-
 
     /**
     @dev
@@ -219,22 +222,22 @@ contract BrightLink is ChainlinkClient {
     always persists enough adai in contract to payout all
     active agreements
      */
-    function takeProfits() public only Owner {
+    function takeProfits() public onlyOwner {
 
-        totalAmount = adai.balanceOf(this(address))
-        profit = totalAmount - depositedFunds;
+        uint totalAmount = adai.balanceOf(address(this));
+        uint profit = totalAmount - depositedFunds;
         
         if (dai.balanceOf(address(this)) < profit){
             WithdrawFundsFromAave(profit-dai.balanceOf(address(this)));
         }
         
-        require(dai.transfer(owner,profit));
+        require(dai.transfer(owner, profit));
     
     }
 
     /**
     @dev
-    release any spare LINK to the contrat owner
+    release any spare LINK to the contract owner
      */
     function retrieveLINK() public onlyOwner{
         
@@ -264,15 +267,14 @@ contract BrightLink is ChainlinkClient {
 
 
 
-
-
-
     ////////////////////////////
     // INTERNAL ORACLE REQUEST FUNCS
 
+        /**
+        @dev
+        outer function that calls the oracleRequest func once per oracle
+         */
         function requestDataFromAPI() internal onlyOwner{
-        // calls the oracleRequest function with each URL
-        // aggregation happens inside fulfill() function
 
         // require protects against aggregaData ==0 from forgetting to set weights
         require(w1+w2+w3 != 0, "please set weights for aggregating oracle data");
@@ -284,7 +286,12 @@ contract BrightLink is ChainlinkClient {
     
     }
 
-
+    /**
+    @dev
+    This function calls the oracles by building the request then calling the internal
+    fulfill() function. 
+    Each fulfill adds new data to the oracleData[] array and increments the index.
+     */
     function oracleRequest(string memory url) internal returns (bytes32 requestId) 
     {   
         // oracle request happens here. URL is passed as var url
@@ -300,7 +307,7 @@ contract BrightLink is ChainlinkClient {
     }
 
     function fulfill(bytes32 _requestId, uint _value) public recordChainlinkFulfillment(_requestId){
-        // fulfill will be called 3x, 1x for each call to OracleRequest (via this.fulfill.selector arg)
+        // fulfill will be called 3x: 1x for each call to OracleRequest (via this.fulfill.selector arg)
 
         // assign data from oracle to position in oracleData array
         oracleData[index] = _value; 
@@ -311,9 +318,12 @@ contract BrightLink is ChainlinkClient {
     }
 
 
+    /**
+    @dev
+    ensures a sufficient number of oracles return valid data
+    avoids accidentally centralizing workflow by relying on 1 oracle
+     */
     function validateOracleData() internal {    
-        // ensures a sufficient number of oracles return valid data
-        // avoids accidentally centralizing workflow by relying on 1 oracle
 
         for (uint16 i = 0; i<oracleData.length; i++) {  //for loop example
             if (oracleData[i] ==0){
@@ -330,7 +340,7 @@ contract BrightLink is ChainlinkClient {
     // VIEW FUNCS
 
     function viewValueFromOracle() public view returns(uint256 viewValue){
-        //  show aggregated orace data to user
+        //  show aggregated oracle data to user
         viewValue = aggregateData;
     }
 

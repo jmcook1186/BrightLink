@@ -9,6 +9,7 @@ Brightlink is a PoC project that shows how communities can be incentivized to "b
 The general model is that a donor defines a reward, target and time period, for example they may propose that a 10,000 DAI reward is available for a 15% increase in the detectable vegetation in a town over summer (June-August). This becomes encoded logic in the BrightLink smart contract. This includes the previous year's data being generated as a baseline to compare against by running the geospatial processing scripts. After the set time period, the scripts are run again to get updated estimates. If the updated data is sufficiently improved against the baseline, then the donated DAI is paid out to the community wallet. If not, the DAI is returned to the donor. In between times, the DAI is held in an Aave lending pool, generating profit for the BrightLink platform.
 
 Ongoing blog posts about this project development can be found at [www.tothepoles.co.uk/](https://tothepoles.co.uk/category/eolink/)*
+NB ONLY VEGETATION MODEL FUNCTIONAL AT THE MOMENT (ALBEDO MODEL COMING SOON)!
 
 ### Mechanism
 
@@ -16,8 +17,7 @@ The contract contains a function that triggers a Chainlink oracle to make a GET 
 
 ### Remote Sensing
 
-For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has mre cloudy images, etc).
-
+For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc).
 
 
 ## Prerequisites

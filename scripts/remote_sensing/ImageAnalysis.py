@@ -52,6 +52,13 @@ def setupGEE(coords, platform, startDate, endDate):
     return collection, area
 
 
+def albedo_LANDSAT():
+    return
+
+def albedo_Sentinel():
+    return
+
+
 # perform any calculation on the image collection here
 def ndvi_S2(img):
     ndvi = ee.Image(img.normalizedDifference(['8', '4'])).rename(["ndvi"])
