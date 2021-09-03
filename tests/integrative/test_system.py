@@ -73,6 +73,7 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     postSettleBalDonor = dai.balanceOf(load_donor)
 
     if oracleData > baseline:
+        
         assert preSettleBalCust < postSettleBalCust
 
     else:

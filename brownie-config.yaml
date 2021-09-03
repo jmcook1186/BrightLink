@@ -3,6 +3,12 @@
 reports:
   exclude_contracts:
     - SafeMath
+
+# change the build directory to be within react's scope
+project_structure:
+    build: client/src/artifacts
+
+
 dependencies:
   - smartcontractkit/chainlink-brownie-contracts@1.0.2
   - OpenZeppelin/openzeppelin-contracts@3.4.0
@@ -47,3 +53,5 @@ networks:
 wallets:
   from_key: ${PRIVATE_KEY}
 
+# enable output of development artifacts to load with react
+dev_deployment_artifacts: true
