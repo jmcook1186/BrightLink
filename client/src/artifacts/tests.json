@@ -1,0 +1,15 @@
+{
+  "contracts": {
+    "BrightLink": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "LinkToken": "49e7bae2df618e81d877632c6ad55872ff2ce801",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/BasicToken": "92084ac5279a2a3db988d9e01d7e6d3e3a4dab8d",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/BufferChainlink": "3b4158955f564edb18bd7a8ffdb49859c904f0b7",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/CBORChainlink": "3b4158955f564edb18bd7a8ffdb49859c904f0b7",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/Chainlink": "3b4158955f564edb18bd7a8ffdb49859c904f0b7",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/ChainlinkClient": "750a107dfd09b0702b5ae03a4b6ea3c8b73190e1",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/SafeMathChainlink": "bf84f5dba942291289c80f271862cb515ce813ab",
+    "smartcontractkit/chainlink-brownie-contracts@1.0.2/StandardToken": "7f21b0e2f1d1fcf89f4466183c9e73bc3cf77276"
+  },
+  "tests": {},
+  "tx": {}
+}
