@@ -127,6 +127,12 @@ dmypy.json
 .idea/
 Process_Dir/
 
-\.azure_secret
 
+# secret files
+\.azure_secret
 \.cscihub_secret
+
+
+# build/artifacts
+./client/node_modules
+/client/src/artifacts/contracts/dependencies/

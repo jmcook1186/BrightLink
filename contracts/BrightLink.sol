@@ -127,7 +127,7 @@ contract BrightLink is ChainlinkClient {
     @dev
     returns accumulated aDai to Aave pool, retrieving Dai at 1:1
      */
-    function WithdrawFundsFromAave(uint _amount) public onlyOwner {
+    function WithdrawFundsFromAave(uint _amount) internal onlyOwner {
     	
         adai.approve(poolAddress, _amount);
         adai.approve(address(this), _amount);
@@ -167,7 +167,7 @@ contract BrightLink is ChainlinkClient {
     @dev
     assumes remote sensing scripts have been run a second time, updating the API endpoints
      */
-    function UpdateOracleData(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
+    function UpdateOracleData(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public {
         
         int id = customerToAgreementID[_customer];
         setWeights(_w1, _w2, _w3);
