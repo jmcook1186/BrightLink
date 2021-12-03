@@ -1,6 +1,5 @@
-# blockchain-developer-bootcamp-final-project
 
-# Urban-Greening app
+# BrightLink: Urban-Greening app
 ## Satellite-verified greening of urban environments
 
 This app will allow donors to escrow money in a smart contract as an incentive for a community to "green" a target area. Greening can include rooftop gardens, planting on verges and scrub-land, reforesting, etc. The donated funds are paid out if, and only if, the target area is demonstrably greener after a set time has elapsed. This is measured using satellite remote sensing. Multispectral sensors onboard NASA'a MODIS and LANDSAT and ESA's Sentinel-2 platforms have sufficient spectral resolution to detect chlorophyll using its reflectance signature. Chlorophyll is unique to photosynthetic plants and algae, and is therefore diagnostic of added vegetation in an urban environment. Using the chlorophyll index prtects against communities gaming the system by laying astroturf or painting surfaces green, and also enables expansion of the term "greening" to include improving the health of existing vegetation as well as adding more, since healthier plants produce more chlorophyll.
