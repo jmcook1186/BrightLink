@@ -1,15 +1,15 @@
-# BRIGHTLINK
+# blockchain-developer-bootcamp-final-project
 
-Brightlink is a PoC project that shows how communities can be incentivized to "brighten" their local environments. There are two examples implemented in this repository:
+# Urban-Greening app
+## Satellite-verified greening of urban environments
 
-2) A community is incentivized to "green" their local environment by conserving and adding vegetated land (replanting verges, rooftop gardens, etc..) and engaging in urban agriculture. This is measured by quantifying the NDVI chlorophyll index across the area of interest using multispectral data from three satellites (MODIS, LANDSAT, Sentinel2).
+This app will allow donors to escrow money in a smart contract as an incentive for a community to "green" a target area. Greening can include rooftop gardens, planting on verges and scrub-land, reforesting, etc. The donated funds are paid out if, and only if, the target area is demonstrably greener after a set time has elapsed. This is measured using satellite remote sensing. Multispectral sensors onboard NASA'a MODIS and LANDSAT and ESA's Sentinel-2 platforms have sufficient spectral resolution to detect chlorophyll using its reflectance signature. Chlorophyll is unique to photosynthetic plants and algae, and is therefore diagnostic of added vegetation in an urban environment. Using the chlorophyll index prtects against communities gaming the system by laying astroturf or painting surfaces green, and also enables expansion of the term "greening" to include improving the health of existing vegetation as well as adding more, since healthier plants produce more chlorophyll.
 
-3) Environmental organizations are incentivized to "brighten" snow, ice and sea ice surfaces to slow their rate of melting. This is currently achieved occasionally using light-scattering sand or strategically-placed white sheets and has the effect of slowing sea ice retreat and prolonging the life of snowpacks for ski resorts etc. The degree to which brightening occurs will be determined as a function of the deviation in the surface albedo derived from Sentinel-2 imagery relative to a baseline.
+To achieve this, a financial model will be encoded in a Solidity smart contract and deployed to an Ethereum testnet (kovan). A donor will deposit funds into the contract along with a target change in chlorophyll index and an address for the payee. For example, a donor might say that 10,000 DAI is available if a community manages to green by 10% above its baseline. The basline chlorophyll index for a target area will be determined by making an external call through a Chainlink oracle to three bespoke Google Earth Engine apps hosted on Heroku. This will accept polygon coordinates for the target area, start and end times as arguments and will return the area-averaged chlorophyll index averaged over the given dates (eg. the mean for the 3 most recent summers) as a uint. This will act as the threshold for determining a payout later. After a set time, the contract will trigger the chainlink oracle a second time to gather updated measurements. If the difference between initial and final measurements exceeds the given threshold, the payee automatically receives the donated funds. If not, the funds are returned to the donor. In the mean time, the contract deposits the funds in an Aave lending pool where it accrues yield. That yield is kept as profit for the platform.
 
-The general model is that a donor defines a reward, target and time period, for example they may propose that a 10,000 DAI reward is available for a 15% increase in the detectable vegetation in a town over summer (June-August). This becomes encoded logic in the BrightLink smart contract. This includes the previous year's data being generated as a baseline to compare against by running the geospatial processing scripts. After the set time period, the scripts are run again to get updated estimates. If the updated data is sufficiently improved against the baseline, then the donated DAI is paid out to the community wallet. If not, the DAI is returned to the donor. In between times, the DAI is held in an Aave lending pool, generating profit for the BrightLink platform.
+### Embedded DeFi
 
-Ongoing blog posts about this project development can be found at [www.tothepoles.co.uk/](https://tothepoles.co.uk/category/eolink/)*
-NB ONLY VEGETATION MODEL FUNCTIONAL AT THE MOMENT (ALBEDO MODEL COMING SOON)!
+This platform makes a profit during the time between a new project being agreed and the payout. This is achieved using an internal function that takes the deposited funds and sends them to an Aave lending pool. When a payout is requested, the funds are withdrawn from the Aave pool back into the contract. The principal is then paid out according to the results of the urban greening, while the remainder is accumulated as profit in the contract which can be retrived at any time by the contract owner. <b>please note</b> this functionality will not be apparent from interacting with the system via the public frontend - but the video walkthrough demonstrates how it works and if you wish you can use brownie console to replicate using instructions below.
 
 ### Mechanism
 
@@ -17,83 +17,107 @@ The contract contains a function that triggers a Chainlink oracle to make a GET 
 
 ### Remote Sensing
 
-For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc).
+For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc). <b>please note</b> in this submission, to avoid having to either share my google earth engine credentials or rely on the assessor signing up to google-earth-engine I have simply mocked this with a static endpoint. I also decided, for simplicity, not to add site coordinates as an input field, instead in this proof-of-concept version has fixed site coordinates.
+
+## Public URL
+
+The public front-end for this project is at "https://yeti87803643.github.io/blockchain-developer-bootcamp-final-project/". Here, a user can connect using MetaMask and interact with the contract. Please note that the front end only allows a user to register a new agreement, wait some period of time, then request a settlement. This is super simple and the correct functionality can be observed by watching the balances of the relevant accounts. The walkthrough video shows the more interesting functionality (profit generation via aave lending, updating staellite remote sensing values).
+
+<img src="/Assets/app_screenshot.png" width=1500>
+
+## Ethereum Address
+
+The NFT for the project completion can be sent to my ENS name: jmcook.eth
+
+## VIDEO WALKTHROUGH
+
+A video walkthrough of this dapp is available [HERE](https://youtu.be/n783zeTC3bk)
+
+## MOCKING
+
+Ths app currently requires Google Earth Engine login credentials to update the vegetation index for a given location. Therefore, for this submission I decided to mock the API endpoints queried by the Chainlink oracles. They stay constant and therefore a payout should be returned to the donor rather than awarded to the customer in this version of the system (there is another version, closer to production, for which this is not the case, at www.github.com/jmcook1186/Brightlink) but I reasoned that this version wouold be harder to evaluate for the bootcamp as it currently has awkward dependencies that I was not able to resolve before the submission deadline. I also decided not to include site coordinates as in input field as the app was becoming quite complicatedand the UX was not great. I decided for this submission, fixed site coordinates were best, with variable coordinates coming in a later update.
+
+## Directory Structure
+
+Please see file dir_tree.md for an annotated schematic of the project directory structure.
 
 
-## Prerequisites
+## Instructions
+### Using the App
+### This version is deployed on Kovan only. This is because it relies upon having wallets funded with testnet ETH, DAI and LINK and I wasn't able to pre-fund wallets fo multiple testnets in time for the project submission.
 
-Please install or have installed the following:
+#### 0) IF NECESSARY, CREATE PYTHON ENVIRONMENT FROM YAML
+The environment.yaml file contained in this repository's root directory contains all the dependencies required to run this app, includign Brownie and Ganache.
 
-- [nodejs and npm](https://nodejs.org/en/download/)
-- [python](https://www.python.org/downloads/)
-- 
-## Installation
+`conda create -f environment.yaml `
 
-1. [Install Brownie](https://eth-brownie.readthedocs.io/en/stable/install.html) 
+activate the environment
+
+`source activate BlockChain`
+
+#### 1) ADD ACCOUNTS. 
+
+I have prefunded three dummy accounts on Kovan with ETH, DAI and LINK to enable this app to be used by the assessors. Running from "main" account allows onlyOwner privelages in contract, others are arbitrary but contain funds for convenience and should be named "account2" and "account3" so the automated tests can load them by name). These dummy accounts have only ever been used on testnets and never touched mainnet or any L2. They can be imported to MetaMask. 
+
+You are also welcome to redeploy a fresh instance of the contract with your own account as the contract owner - just update .env and run:
+
+```
+brownie run ./scripts/deploy_BrightLinkv1.py
+
+```
+
+#### 2) POPULATE .ENV
+
+I have included a file .env_example in this repository. Rename it .env and fill in the spaces with your Infura project ID, private key and Git personal authentication token. The private key to use is the one provided above for account "main". This will ensure the wallet is funded with sufficient ETH, LINK and DAI and give onlyOwner privelages. The Git personal auth token is optional and only required if the remote sensing scripts are being run (probably not for assessment as I have mocked everything).
+
+3) Decide which account represents the "donor" who is putting in funds. Approve dai spending from this account:
+```bash
+brownie console --network kovan
+
+```
+```python
+donor = accounts.load(account3)
+dai = interface.ERC20('0xff795577d9ac8bd7d90ee22b6c1703490b6512fd')
+dai.approve(contract.address, 2000e18,{'from':donor})
+```
+
+#### 3) Pre-fund the contract with some LINK
+(in brownie console)
+```
+link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
+link.transfer(contract,0.6,{'from':owner})
+
+```
+#### 4) Open app in web browser, add accounts to MetaMask
+   (alternatively run from localhost by opening a new console, navigating to ./client/src and `npm run start`)
+#### 5) Connect "main" account to app
+#### 6) Provide address for customer (account 2) and donor (account3)
+#### 7) Click CONFIRM (the DAI balance for the don or will decrease by the setllement amount)
+   (make sure the connected wallet is open in metamask when the confirm button is clicked)
+#### 7) When some time has passed, click SETTLE the balances will redress
+#### 8)  click "documentation" in lower right corner for more information
+
+
+### Running Automated tests
+
+1) ACTIVATE BROWNIE ENVIRONMENT
+   `source activate BlockChain`
+
+2) To run unit tests (i.e. individual functions tested separately):
+`brownie test ./tests/unitary --network kovan`
+
+1) To run integration test (i.e. single test covering a complete end-to-end use of the contract):
+`brownie test ./tests/integrative --network kovan` 
+
+4) If the initial test fails, it is likely because there is some residual DAI sitting in the contract from previous interactions. If this is the case it can easily be fixed by calling the "escapeHatch()" function in the contract as follows:
 
 ```bash
-pip install eth-brownie
+brownie console --network kovan
+```
+```
+contract = Contract(<contract_address>)
+owner = accounts.load("main")
+contract.escapeHatch({'from':owner})
 ```
 
-2. [Install ganache-cli](https://www.npmjs.com/package/ganache-cli)
-
-```bash
-npm install -g ganache-cli
-```
-
-3. This project deploys to the Kovan testnet. This requires an Infura project ID and your wallet's private key to be provided in a .env file (not 
-provided in this git repository).
-
-You can get a `WEB3_INFURA_PROJECT_ID` by getting a free trial of [Infura](https://infura.io/). You can [follow this guide](https://ethereumico.io/knowledge-base/infura-api-key-guide/) to getting a project key. You can find your `PRIVATE_KEY` from your ethereum wallet like [metamask](https://metamask.io/). 
-
-You can add your environment variables to the `.env` file:
-
-```
-export WEB3_INFURA_PROJECT_ID=<PROJECT_ID>
-export PRIVATE_KEY=<PRIVATE_KEY>
-
-```
-
-4. Your wallet requires Kovan test ETH and test-LINK.
-   
-   DO NOT USE REAL ASSETS. DO NOT SEND ASSETS FROM A MAINNET WALLET TO A KOVAN ADDRESS. DO NOT USE YOUR MAINNET ACCOUNT IN A DEVELOPMENT ENVIRONMENT.
-   
-   See instructions [here](https://faucet.kovan.network/) and [here](https://docs.chain.link/docs/acquire-link/)
-
-
-5. Google Earth Engine
-   you need a GEE account and the GEE packages installed in the development environment
-
-6. GIT
-   A Github account with the auth token in .env
-
-
-
-
-## Testing
-
-Testing is achieved using pytest in brownie. I have not yet written any mocks, so all tests use the contracts deployed on the Kovan testnet. Fixtures (configuration common to all tests) are defined in conftest.py and unit tests are defined in test_flood_insurance.py. To run the tests from the terminal, navigate to the project folder, then:
-
-```
->>> brownie test --network kovan
-
-```
-
-
-## Resources
-
-To get started with Brownie:
-
-* [Chainlink Documentation](https://docs.chain.link/docs)
-* Check out the [Chainlink documentation](https://docs.chain.link/docs) to get started from any level of smart contract engineering. 
-* Check out the other [Brownie mixes](https://github.com/brownie-mix/) that can be used as a starting point for your own contracts. They also provide example code to help you get started.
-* ["Getting Started with Brownie"](https://medium.com/@iamdefinitelyahuman/getting-started-with-brownie-part-1-9b2181f4cb99) is a good tutorial to help you familiarize yourself with Brownie.
-* For more in-depth information, read the [Brownie documentation](https://eth-brownie.readthedocs.io/en/stable/).
-
-Explainers for this specific repository:
-* [www.tothepoles.co.uk](https://tothepoles.co.uk/2021/06/04/eolink-0-1-3-simplified-flood-insurance/)
-
-
-## License
-
-This project is licensed under the [MIT license](LICENSE).
+This will reset the contract balance and the tests should now pass. This should not be necessary as it should be handled inside the testing script, but just in case.

@@ -28,7 +28,7 @@ def load_donor():
     return donor
 
 @pytest.fixture(scope="module")
-def getDeployedContract(load_owner):
+def get_deployed_contract(load_owner):
     contract = load_owner.deploy(BrightLink,'0xff795577d9ac8bd7d90ee22b6c1703490b6512fd',\
         '0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8',\
             '0xa36085F69e2889c224210F603D836748e7dC0088',\

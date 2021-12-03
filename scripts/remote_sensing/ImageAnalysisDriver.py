@@ -28,4 +28,4 @@ elif platform == 'MODIS':
 collection, area = setupGEE(coords, platform, startDate, endDate)
 ndvi_score = runAnalysis(collection, platform, score_type, savepath, area, plot=True)
 update_json(filepath, ndvi_score)
-#commit_and_push(filepath, "update NFT metadata according to outcome of S2 ndvi app")
+commit_and_push(filepath, "update json page according to outcome of S2 ndvi app")

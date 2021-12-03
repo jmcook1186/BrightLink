@@ -1,4 +1,3 @@
-
 import pytest
 import time
 from brownie import (
@@ -6,32 +5,32 @@ from brownie import (
     interface
 )
 
-def test_initial_balances(load_customer, getDeployedContract):
+def test_initial_balances(load_customer, get_deployed_contract):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
-    contract = getDeployedContract
+    contract = get_deployed_contract
 
     assert dai.balanceOf(contract) ==0
     assert adai.balanceOf(contract)==0
 
     return
 
-def test_approvals(load_donor, getDeployedContract, set_deposit_amount):
+def test_approvals(load_donor, get_deployed_contract, set_deposit_amount):
     
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
-    dai.approve(getDeployedContract, set_deposit_amount, {'from':load_donor})
+    dai.approve(get_deployed_contract, set_deposit_amount, {'from':load_donor})
 
     return
 
 
-def test_system(set_deposit_amount, getDeployedContract, load_owner, load_customer, load_donor):
+def test_system(set_deposit_amount, get_deployed_contract, load_owner, load_customer, load_donor):
 
     dai = interface.IERC20('0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD')
     adai = interface.IERC20('0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8')
     link = interface.LinkTokenInterface('0xa36085F69e2889c224210F603D836748e7dC0088')
 
-    contract = getDeployedContract
+    contract = get_deployed_contract
 
     link.transfer(contract,0.6e18,{'from':load_owner})
     assert link.balanceOf(contract)== 0.6e18
@@ -39,7 +38,6 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     dai.approve(contract,set_deposit_amount,{'from':load_donor})
     contract.addNewCustomer(load_customer, load_donor, set_deposit_amount, {'from': load_owner})
     
-
     assert contract.checkIdForCustomer(load_customer)==0
     assert contract.checkvalueForAgreementId(0)==set_deposit_amount
     assert dai.balanceOf(contract) == 0
@@ -48,8 +46,7 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     assert contract.checkBalance()[1] >= set_deposit_amount
 
 
-
-    contract.setBaseLine(load_customer,100,100,100,{'from':load_owner})
+    contract.setBaseLine(load_customer,{'from':load_owner})
     time.sleep(10)
     baseline = contract.viewValueFromOracle() 
 
@@ -59,7 +56,7 @@ def test_system(set_deposit_amount, getDeployedContract, load_owner, load_custom
     assert bal > newbal
     newbal==set_deposit_amount
 
-    contract.UpdateOracleData(load_customer, 100,100,100, {'from': load_owner})
+    contract.UpdateOracleData(load_customer, {'from': load_owner})
     time.sleep(10)
     oracleData = contract.viewValueFromOracle()
 

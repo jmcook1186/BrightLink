@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-// this contract is deployed on Kovan at 0xa442852B9B9A92B277E6aF0FDcAe986EAa1986B3
+// this contract is deployed on Kovan at 0xB5600D46f8e7191B3791eCCEC7697a537976d4d5
 
 pragma solidity ^0.6.6;
 
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "/home/joe/Code/BrightLink/interfaces/ILendingPoolAddressesProviderV2.sol";
-import "/home/joe/Code/BrightLink/interfaces/ILendingPoolV2.sol";
+import "/home/joe/Code/blockchain-developer-bootcamp-final-project/interfaces/ILendingPoolAddressesProviderV2.sol";
+import "/home/joe/Code/blockchain-developer-bootcamp-final-project/interfaces/ILendingPoolV2.sol";
 
 contract BrightLink is ChainlinkClient {
 
@@ -30,9 +30,9 @@ contract BrightLink is ChainlinkClient {
     ILendingPoolAddressesProviderV2 public provider;
     uint16 index;
     uint256 aggregateData;
-    uint16 w1;
-    uint16 w2;
-    uint16 w3;
+    uint16 w1 = 100;
+    uint16 w2 = 100;
+    uint16 w3 = 100;
     uint16 minResponses = 2;
     uint16 badOracles = 0;
     int Id = 0;
@@ -95,15 +95,18 @@ contract BrightLink is ChainlinkClient {
 
         // require that the customer does not have an existing agreement
         require(customerToAgreementID[_customer] <= 0,"customer already exists");
-        // use require to ensure no agreement is estabished unless transaction succeeds
-        require(dai.transferFrom(_donor, address(this), _value));
-    
+
+        
         depositedFunds += _value;
         customerToAgreementID[_customer] = Id;
         donorToAgreementID[_donor] = Id;
         agreementIdToValue[Id] = _value;
         agreementIdToDonor[Id]  = _donor;
+        
+        
+        require(dai.transferFrom(_donor, address(this), _value));
         depositFundsToAave();
+
         Id+=1; 
     }
 
@@ -114,7 +117,7 @@ contract BrightLink is ChainlinkClient {
     sends all dai in contract to Aave lending pool,
     returning aDai
      */
-    function depositFundsToAave() internal {
+    function depositFundsToAave() internal{
 
         dai.approve(poolAddress,1000000e18);
         dai.approve(address(this),1000000e18);
@@ -127,7 +130,7 @@ contract BrightLink is ChainlinkClient {
     @dev
     returns accumulated aDai to Aave pool, retrieving Dai at 1:1
      */
-    function WithdrawFundsFromAave(uint _amount) internal onlyOwner {
+    function WithdrawFundsFromAave(uint _amount) internal{
     	
         adai.approve(poolAddress, _amount);
         adai.approve(address(this), _amount);
@@ -141,7 +144,7 @@ contract BrightLink is ChainlinkClient {
     sets weighting for aggregating the oracle data
     default is to trust all oracles equally (100,100,100)
      */
-    function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) internal onlyOwner{
+    function setWeights(uint16 _w1, uint16 _w2, uint16 _w3) internal {
 
         w1 = _w1;
         w2 = _w2;
@@ -153,12 +156,14 @@ contract BrightLink is ChainlinkClient {
     @dev
     assumes remote sensing scripts have been run setting baseline data at the API endpoints
      */
-    function setBaseLine(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public onlyOwner {
+    function setBaseLine(address _customer) public {
         
         int id = customerToAgreementID[_customer];
-        setWeights(_w1, _w2, _w3);
-        requestDataFromAPI();
-        validateOracleData();
+
+        // MOCKING: REPLACE NECT TWO LINES WITH HARD-CODED VALUE
+        // requestDataFromAPI();
+        // validateOracleData();
+        aggregateData = 5;
         agreementIdToBaseline[id] = aggregateData;
 
     }
@@ -167,10 +172,9 @@ contract BrightLink is ChainlinkClient {
     @dev
     assumes remote sensing scripts have been run a second time, updating the API endpoints
      */
-    function UpdateOracleData(address _customer, uint16 _w1, uint16 _w2, uint16 _w3) public {
+    function UpdateOracleData(address _customer) public {
         
         int id = customerToAgreementID[_customer];
-        setWeights(_w1, _w2, _w3);
         requestDataFromAPI();
         validateOracleData();
         agreementIdToRetrievedData[id] = aggregateData;
@@ -184,7 +188,7 @@ contract BrightLink is ChainlinkClient {
     agreed value and paying it to the customer's wallet if the
     updated values exceeds the baseline. Otherwise, return to donor.
      */
-    function settleAgreement(address _customer) public onlyOwner {
+    function settleAgreement(address _customer) public {
 
         // get ID from customer address
         int agreementId = customerToAgreementID[_customer];
@@ -196,6 +200,15 @@ contract BrightLink is ChainlinkClient {
 
         WithdrawFundsFromAave(amount);
 
+        // subtract expended amount from the running total of deposits
+        depositedFunds-= agreementIdToValue[agreementId];
+        
+        // set transaction value to 0 to prevent re-spending
+        agreementIdToValue[agreementId] = 0;
+
+        customerToAgreementID[_customer] = 0;
+
+
         if (retrieval > threshold){
             
             require(dai.transfer(_customer, amount));
@@ -206,11 +219,6 @@ contract BrightLink is ChainlinkClient {
             require(dai.transfer(donor, amount));   
         }         
 
-        // subtract expended amount from the running total of deposits
-        depositedFunds-= agreementIdToValue[agreementId];
-        
-        // set transaction value to 0 to prevent re-spending
-        agreementIdToValue[agreementId] = 0;
 
 
     }

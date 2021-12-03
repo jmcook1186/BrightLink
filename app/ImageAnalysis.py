@@ -142,7 +142,7 @@ def runAnalysis(collection, platform, score_type, savepath, area, plot):
         import matplotlib.pyplot as plt
         plt.imshow(image)
         plt.colorbar()
-        print("saving to {}".format(str(savepath+'image_ndvi.jpg')))
+        print("saveing to {}".format(str(savepath+'image_ndvi.jpg')))
         plt.savefig(str(savepath+'/image_ndvi.jpg'))
     
     return ndvi_score
@@ -153,7 +153,7 @@ def update_json(file_path, ndvi_score):
     
     with open(str(file_path)) as json_in_file:
         data = json.load(json_in_file)
-        data["data"][0]["result"] = str(int(ndvi_score))
+        data["data"][0]["number"] = str(int(ndvi_score))
     
     with open(str(file_path), 'w') as json_out_file:
         json.dump(data, json_out_file, indent = 4)

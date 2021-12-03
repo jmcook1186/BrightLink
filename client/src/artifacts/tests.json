@@ -10,6 +10,21 @@
     "smartcontractkit/chainlink-brownie-contracts@1.0.2/SafeMathChainlink": "bf84f5dba942291289c80f271862cb515ce813ab",
     "smartcontractkit/chainlink-brownie-contracts@1.0.2/StandardToken": "7f21b0e2f1d1fcf89f4466183c9e73bc3cf77276"
   },
-  "tests": {},
+  "tests": {
+    "tests/integrative/test_system.py": {
+      "coverage": false,
+      "isolated": false,
+      "results": "...",
+      "sha1": "6716f54885e683c1b09767c71ab89e3204c3e7b6",
+      "txhash": []
+    },
+    "tests/unitary/test_system.py": {
+      "coverage": false,
+      "isolated": false,
+      "results": "........",
+      "sha1": "85c8e96c114c93496e06014525b2199d00c163d8",
+      "txhash": []
+    }
+  },
   "tx": {}
 }
