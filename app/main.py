@@ -1,5 +1,6 @@
 from matplotlib.pyplot import get
 from ImageAnalysis import *
+from config_vars import set_heroku_vars
 import threading
 import asyncio
 from flask import Flask, jsonify, request
@@ -28,6 +29,7 @@ def index():
 
 
 async def run_analysis(x1,y1,x2,y2,x3,y3,x4,y4, start, end):
+    set_heroku_vars()
     
     coords = [[float(x1), float(y1)],\
             [float(x2), float(y2)],\
