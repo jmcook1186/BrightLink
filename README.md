@@ -17,11 +17,11 @@ The contract contains a function that triggers a Chainlink oracle to make a GET 
 
 ### Remote Sensing
 
-For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc). <b>please note</b> in this submission, to avoid having to either share my google earth engine credentials or rely on the assessor signing up to google-earth-engine I have simply mocked this with a static endpoint. I also decided, for simplicity, not to add site coordinates as an input field, instead in this proof-of-concept version has fixed site coordinates.
+For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc). <b>please note</b> in this version, to avoid having to either share my google earth engine credentials or rely on the user signing up to google-earth-engine I have simply mocked this with a static endpoint. I also decided, for simplicity, not to add site coordinates as an input field, instead in this proof-of-concept version has fixed site coordinates.
 
 ## Public URL
 
-The public front-end for this project is at "https://yeti87803643.github.io/blockchain-developer-bootcamp-final-project/". Here, a user can connect using MetaMask and interact with the contract. Please note that the front end only allows a user to register a new agreement, wait some period of time, then request a settlement. This is super simple and the correct functionality can be observed by watching the balances of the relevant accounts. The walkthrough video shows the more interesting functionality (profit generation via aave lending, updating staellite remote sensing values).
+The public front-end for this project is at "https://jmcook1186.github.io/BrightLink/". Here, a user can connect using MetaMask and interact with the contract. Please note that the front end only allows a user to register a new agreement, wait some period of time, then request a settlement. This is super simple and the correct functionality can be observed by watching the balances of the relevant accounts. The walkthrough video shows the more interesting functionality (profit generation via aave lending, updating staellite remote sensing values).
 
 <img src="/Assets/app_screenshot.png" width=1500>
 
@@ -41,7 +41,7 @@ Please see file dir_tree.md for an annotated schematic of the project directory 
 
 ## Instructions
 ### Using the App
-### This version is deployed on Kovan only. This is because it relies upon having wallets funded with testnet ETH, DAI and LINK and I wasn't able to pre-fund wallets fo multiple testnets in time for the project submission.
+#### This version is deployed on Kovan only. This is because it relies upon having wallets funded with testnet ETH, DAI and LINK and I wasn't able to pre-fund wallets fo multiple testnets in time for the project submission.
 
 #### 0) IF NECESSARY, CREATE PYTHON ENVIRONMENT FROM YAML
 The environment.yaml file contained in this repository's root directory contains all the dependencies required to run this app, includign Brownie and Ganache.

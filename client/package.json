@@ -15,7 +15,7 @@
     "web-vitals": "^1.0.1",
     "web3": "^1.5.2"
   },
-  "deploy": "gh-pages -d build",
+  
   "scripts": {
     "predeploy": "npm run build",
     "deploy": "gh-pages -b gh-pages -d build",
