@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/BrightLink/static/css/main.5ddd067a.chunk.css",
+    "main.js": "/BrightLink/static/js/main.16729381.chunk.js",
+    "main.js.map": "/BrightLink/static/js/main.16729381.chunk.js.map",
+    "runtime-main.js": "/BrightLink/static/js/runtime-main.8e1da6b1.js",
+    "runtime-main.js.map": "/BrightLink/static/js/runtime-main.8e1da6b1.js.map",
+    "static/js/2.6eeb2ec7.chunk.js": "/BrightLink/static/js/2.6eeb2ec7.chunk.js",
+    "static/js/2.6eeb2ec7.chunk.js.map": "/BrightLink/static/js/2.6eeb2ec7.chunk.js.map",
+    "static/js/3.ecfdca46.chunk.js": "/BrightLink/static/js/3.ecfdca46.chunk.js",
+    "static/js/3.ecfdca46.chunk.js.map": "/BrightLink/static/js/3.ecfdca46.chunk.js.map",
+    "index.html": "/BrightLink/index.html",
+    "static/css/main.5ddd067a.chunk.css.map": "/BrightLink/static/css/main.5ddd067a.chunk.css.map",
+    "static/js/2.6eeb2ec7.chunk.js.LICENSE.txt": "/BrightLink/static/js/2.6eeb2ec7.chunk.js.LICENSE.txt",
+    "static/media/TreeBorder2.e33638a7.jpg": "/BrightLink/static/media/TreeBorder2.e33638a7.jpg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.8e1da6b1.js",
+    "static/js/2.6eeb2ec7.chunk.js",
+    "static/css/main.5ddd067a.chunk.css",
+    "static/js/main.16729381.chunk.js"
+  ]
+}
