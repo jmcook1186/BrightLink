@@ -25,9 +25,6 @@ The public front-end for this project is at "https://yeti87803643.github.io/bloc
 
 <img src="/Assets/app_screenshot.png" width=1500>
 
-## Ethereum Address
-
-The NFT for the project completion can be sent to my ENS name: jmcook.eth
 
 ## VIDEO WALKTHROUGH
 
@@ -35,7 +32,7 @@ A video walkthrough of this dapp is available [HERE](https://youtu.be/n783zeTC3b
 
 ## MOCKING
 
-Ths app currently requires Google Earth Engine login credentials to update the vegetation index for a given location. Therefore, for this submission I decided to mock the API endpoints queried by the Chainlink oracles. They stay constant and therefore a payout should be returned to the donor rather than awarded to the customer in this version of the system (there is another version, closer to production, for which this is not the case, at www.github.com/jmcook1186/Brightlink) but I reasoned that this version wouold be harder to evaluate for the bootcamp as it currently has awkward dependencies that I was not able to resolve before the submission deadline. I also decided not to include site coordinates as in input field as the app was becoming quite complicatedand the UX was not great. I decided for this submission, fixed site coordinates were best, with variable coordinates coming in a later update.
+This version currently mocks the API endpoints queried by the Chainlink oracles. They stay constant and therefore a payout should be returned to the donor rather than awarded to the customer in this version of the system. I also decided not to include site coordinates as in input field as the app was becoming quite complicated and the UX was not great. These will be amended in a later update.
 
 ## Directory Structure
 
@@ -68,7 +65,7 @@ brownie run ./scripts/deploy_BrightLinkv1.py
 
 #### 2) POPULATE .ENV
 
-I have included a file .env_example in this repository. Rename it .env and fill in the spaces with your Infura project ID, private key and Git personal authentication token. The private key to use is the one provided above for account "main". This will ensure the wallet is funded with sufficient ETH, LINK and DAI and give onlyOwner privelages. The Git personal auth token is optional and only required if the remote sensing scripts are being run (probably not for assessment as I have mocked everything).
+I have included a file .env_example in this repository. Rename it .env and fill in the spaces with your Infura project ID, private key and Git personal authentication token. The private key to use is the one for account "main". This will ensure the wallet is funded with sufficient ETH, LINK and DAI and give onlyOwner privelages. The Git personal auth token is optional and only required if the remote sensing scripts are being run (probably not for assessment as I have mocked everything).
 
 3) Decide which account represents the "donor" who is putting in funds. Approve dai spending from this account:
 ```bash
@@ -97,6 +94,8 @@ link.transfer(contract,0.6,{'from':owner})
 #### 7) When some time has passed, click SETTLE the balances will redress
 #### 8)  click "documentation" in lower right corner for more information
 
+<br></br>
+<br></br>
 
 ### Running Automated tests
 
