@@ -1,11 +1,6 @@
-voila
-pandas
-altair
-dotenv
 numpy
-os
-json
+pandas
 ee
-github
-git
-git+git://github.com/jmcook1186/BrightLink
+flask
+threading
+asyncio

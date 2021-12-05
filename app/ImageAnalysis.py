@@ -2,16 +2,15 @@ import ee
 import numpy as np
 import json
 import os
-from github import Github
 from git import Repo
 from dotenv import load_dotenv
+import geemap
 
 load_dotenv()
 
 def setupGEE(coords, platform, startDate, endDate):
 
-    # init the ee object
-    ee.Initialize()
+    Map=geemap.Map()
     
     area = ee.Geometry.Polygon([coords],None,False)
 
@@ -147,40 +146,5 @@ def runAnalysis(collection, platform, score_type, savepath, area, plot):
     
     return ndvi_score
 
-
-
-def update_json(file_path, ndvi_score):
-    
-    with open(str(file_path)) as json_in_file:
-        data = json.load(json_in_file)
-        data["data"][0]["number"] = str(int(ndvi_score))
-    
-    with open(str(file_path), 'w') as json_out_file:
-        json.dump(data, json_out_file, indent = 4)
-    
-    return
-
-
-def commit_and_push(file_path, commit_message):
-    """
-    requires git personal access token to be provided in .env file
-    or set as environment variable in shell
-    """
-
-    current_path = os.getcwd()
-    path_to_repo = '/home/joe/Code/jmcook1186.github.io'
-    os.chdir(path_to_repo)
-    
-    g= Github(os.environ["GIT_TOKEN"])
-    repo = Repo(path_to_repo)
-    
-    repo.index.add(file_path)
-    repo.index.commit(commit_message)
-    origin = repo.remote('origin')
-    origin.push()
-
-    os.chdir(current_path)
-
-    return
 
 

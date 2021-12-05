@@ -16,7 +16,27 @@ The contract contains a function that triggers a Chainlink oracle to make a GET 
 
 ### Remote Sensing
 
-For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc). <b>please note</b> in this version, to avoid having to either share my google earth engine credentials or rely on the user signing up to google-earth-engine I have simply mocked this with a static endpoint. I also decided, for simplicity, not to add site coordinates as an input field, instead in this proof-of-concept version has fixed site coordinates.
+For the community greening project the remote sensing scripts use Google Earth Engine to calculate the normalised-difference vegetation index for the given area on the given dates. This is done using three separate data sources from three different satellites (Landsat, MODIS, Sentinel-2). For each dataset, the ndvi is averaged (arithmetic mean) over time and space to give a single value for the ndvi of the region for the given time period. The three values (one from each satellite) are each pulled onchain by a chainlink oracle using the weighted mean. By default, the three satellites are equally weighted, but the contract owner can update this as necessary (.e.g if the lower resolution of MODIS gives less confidence, if one dataset has more cloudy images, etc). 
+
+The remote sensing app is hosted in its own self contained folder with its own .git folder. This is to enable the remote sensing app to be hosted as a standalone heroku app serving json data that can be ingested by our main brightLink app. The API endpoint serving the remote sensing data is https://brightlink.herokuapp.com. 
+
+<b>Dev note:</b> to update the remote sensing app, navigate to /app and make nay necessary changes, then
+```bash
+heroku login
+git add .
+git commit -m "message"
+git push heroku master
+```
+Also make sure the environment variables on the heroku side are up to date (this includes google earth engine credentials) by running
+`python config_vars.py`
+
+The requests are handled by a Chainlink oracle inside the Brightlink Solidity contract, but the user can make manual requests using `curl`. The site coordinates and start/end date are passed as arguments as follows:
+
+```bash
+curl -X GET "https://brightlink.herokuapp.com/?x1=1.395&y1=51.3836&x2=1.3766&y2=51.3836&x3=1.3766&y3=51.3899&x4=1.3985&y4=51.3899&start=2021-06-01&end=2021-08-31"
+```
+
+After about 30 seconds a single json-encoded value will be returned, which represents the average NDVI score from MODIS, LANDSAT and Sentinel-2 for the target region.
 
 ## Public URL
 

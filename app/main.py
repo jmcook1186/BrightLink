@@ -1,9 +1,10 @@
-from matplotlib.pyplot import get
+
 from ImageAnalysis import *
 from config_vars import set_heroku_vars
 import threading
 import asyncio
 from flask import Flask, jsonify, request
+import os
 
 
 print(f"In flask global level: {threading.current_thread().name}")
@@ -25,6 +26,7 @@ def index():
     start_date = request.args.get('start')
     end_date =request.args.get('end')
     result = loop.run_until_complete(run_analysis(x1,y1,x2,y2,x3,y3,x4,y4,start_date,end_date))
+
     return jsonify({"result": result})
 
 
@@ -49,9 +51,6 @@ async def run_analysis(x1,y1,x2,y2,x3,y3,x4,y4, start, end):
 
 
     result = np.mean(scores)
-
-    update_json(filepath, result)
-    commit_and_push(filepath, "update json page according to outcome of S2 ndvi app")
     
     return result
 
