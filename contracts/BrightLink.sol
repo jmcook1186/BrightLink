@@ -4,30 +4,15 @@
 pragma solidity ^0.6.6;
 
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "/home/joe/Code/blockchain-developer-bootcamp-final-project/interfaces/ILendingPoolAddressesProviderV2.sol";
-import "/home/joe/Code/blockchain-developer-bootcamp-final-project/interfaces/ILendingPoolV2.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/ILendingPoolAddressesProviderV2.sol";
+import "../interfaces/ILendingPoolV2.sol";
 
 contract BrightLink is ChainlinkClient {
 
-
+    bool public paused;
+    int Id = 0;
     uint16 private constant referral = 0;
-    address private immutable oracle; 
-    bytes32 private immutable jobID;
-    uint256 private immutable fee;
-    IERC20 public immutable dai;
-    IERC20 public immutable adai;
-    uint256 public depositedFunds;
-    address private owner;
-    address public dai_address;
-    address public adai_address;
-    address public poolAddress;
-    address public poolAddressProvider;
-    uint256 public value;
-    string[3] public APIaddresses; 
-    uint256[3] public oracleData;
-    ILendingPoolV2 public lendingPool;
-    ILendingPoolAddressesProviderV2 public provider;
     uint16 index;
     uint256 aggregateData;
     uint16 w1 = 100;
@@ -35,19 +20,35 @@ contract BrightLink is ChainlinkClient {
     uint16 w3 = 100;
     uint16 minResponses = 2;
     uint16 badOracles = 0;
-    int Id = 0;
+    bytes32 private immutable jobID;
+    uint256 private immutable fee;
+    address private immutable oracle; 
+    uint256 public depositedFunds;
+    uint256[3] public oracleData;
+    uint256 public value;
+    address private owner;
+    address public dai_address;
+    address public adai_address;
+    address public poolAddress;
+    address public poolAddressProvider;
+    string[3] public APIaddresses;   
     mapping(address => int) private customerToAgreementID;
     mapping(address => int) private donorToAgreementID;
     mapping(int => address) private agreementIdToDonor;
     mapping(int => uint256) private agreementIdToBaseline;
     mapping(int => uint256) private agreementIdToValue;
     mapping (int => uint256) public agreementIdToRetrievedData;
+    IERC20 public immutable dai;
+    IERC20 public immutable adai;    
+    ILendingPoolV2 public lendingPool;
+    ILendingPoolAddressesProviderV2 public provider;
 
     constructor(address _dai_address, address _adai_address, address _link, address _poolAddressProvider,
     address _oracle, string memory _jobID, uint256 _fee) public{
         
         // var instantiations
         owner = msg.sender;
+        paused = false;
         depositedFunds = 0;
         dai_address = _dai_address;
         adai_address = _adai_address;
@@ -91,7 +92,7 @@ contract BrightLink is ChainlinkClient {
     donor to have approved a DAI transfer of value >= _value.
 
      */
-    function addNewCustomer(address _customer, address _donor, uint256 _value) public {
+    function addNewCustomer(address _customer, address _donor, uint256 _value) public notPaused {
 
         // require that the customer does not have an existing agreement
         require(customerToAgreementID[_customer] <= 0,"customer already exists");
@@ -156,7 +157,7 @@ contract BrightLink is ChainlinkClient {
     @dev
     assumes remote sensing scripts have been run setting baseline data at the API endpoints
      */
-    function setBaseLine(address _customer) public {
+    function setBaseLine(address _customer) public notPaused{
         
         int id = customerToAgreementID[_customer];
 
@@ -172,7 +173,7 @@ contract BrightLink is ChainlinkClient {
     @dev
     assumes remote sensing scripts have been run a second time, updating the API endpoints
      */
-    function UpdateOracleData(address _customer) public {
+    function UpdateOracleData(address _customer) public notPaused{
         
         int id = customerToAgreementID[_customer];
         requestDataFromAPI();
@@ -188,7 +189,7 @@ contract BrightLink is ChainlinkClient {
     agreed value and paying it to the customer's wallet if the
     updated values exceeds the baseline. Otherwise, return to donor.
      */
-    function settleAgreement(address _customer) public {
+    function settleAgreement(address _customer) public notPaused {
 
         // get ID from customer address
         int agreementId = customerToAgreementID[_customer];
@@ -253,6 +254,11 @@ contract BrightLink is ChainlinkClient {
         require(link.transfer(owner, link.balanceOf(address(this))), "Unable to transfer");
     }
 
+    function circuitBreaker(bool _paused) public onlyOwner{
+        paused = _paused;
+
+    }
+
 
     function escapeHatch() public onlyOwner{
         // for testing purposes, if all gone wrong, retrieve funds
@@ -268,7 +274,7 @@ contract BrightLink is ChainlinkClient {
 
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
         if (link.balanceOf(address(this))>0){
-        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
+        require(link.transfer(owner, link.balanceOf(address(this))), "Unable to transfer");
         }
 
     }
@@ -282,7 +288,7 @@ contract BrightLink is ChainlinkClient {
         @dev
         outer function that calls the oracleRequest func once per oracle
          */
-        function requestDataFromAPI() internal onlyOwner{
+        function requestDataFromAPI() internal onlyOwner notPaused{
 
         // require protects against aggregaData ==0 from forgetting to set weights
         require(w1+w2+w3 != 0, "please set weights for aggregating oracle data");
@@ -300,7 +306,7 @@ contract BrightLink is ChainlinkClient {
     fulfill() function. 
     Each fulfill adds new data to the oracleData[] array and increments the index.
      */
-    function oracleRequest(string memory url) internal returns (bytes32 requestId) 
+    function oracleRequest(string memory url) internal notPaused returns (bytes32 requestId) 
     {   
         // oracle request happens here. URL is passed as var url
         // args are jobID, callback address (this contract) and fulfill function from this contract
@@ -331,7 +337,7 @@ contract BrightLink is ChainlinkClient {
     ensures a sufficient number of oracles return valid data
     avoids accidentally centralizing workflow by relying on 1 oracle
      */
-    function validateOracleData() internal {    
+    function validateOracleData() internal notPaused {    
 
         for (uint16 i = 0; i<oracleData.length; i++) {  //for loop example
             if (oracleData[i] ==0){
@@ -383,6 +389,11 @@ contract BrightLink is ChainlinkClient {
     
     modifier onlyOwner(){
         require(owner==msg.sender);
+        _;
+    }
+
+    modifier notPaused(){
+        require(paused==false, "Contract is paused");
         _;
     }
     

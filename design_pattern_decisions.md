@@ -20,4 +20,5 @@ Mapping keeps track of status of customer/donor agreements, current data etc
 Settling agreement nullifies data in mapping
 
 ## Circuit Breaker
+"circuitBreaker" sets paused==True, so all funcs with notPaused modifier will be locked. circuitBreaker() has onlyOwner modifier.
 "EscapeHatch" function withdraws all unspent funds back to the contract owner  

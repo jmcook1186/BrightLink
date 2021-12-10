@@ -9,8 +9,8 @@ import geemap
 load_dotenv()
 
 def setupGEE(coords, platform, startDate, endDate):
-
-    Map=geemap.Map()
+    
+    Map=geemap.Map(basemap='HYBRID')
     
     area = ee.Geometry.Polygon([coords],None,False)
 
