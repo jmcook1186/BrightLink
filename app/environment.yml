@@ -70,7 +70,6 @@ dependencies:
   - libwebp-base=1.2.0=h7f98852_2
   - lz4-c=1.9.3=h9c3ff4c_1
   - markupsafe=2.0.1=py38h497a2fe_0
-  - matplotlib-inline=0.1.2=pyhd8ed1ab_2
   - multidict=5.1.0=py38h497a2fe_1
   - ncurses=6.2=h58526e2_4
   - numpy=1.21.1=py38h9894fe3_0
